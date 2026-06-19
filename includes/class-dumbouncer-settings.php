@@ -76,7 +76,7 @@ class Dumbouncer_Settings {
         ?>
         <div class="wrap">
             <h1>Dumbouncer</h1>
-            <p><?php esc_html_e('Intelligent agent friendly proof-of-work spam gate. Protects the built-in contact shortcode, comments, Contact Form 7, WPForms, and login/registration.', 'dumbouncer'); ?></p>
+            <p><?php esc_html_e('Intelligent agent friendly proof-of-work spam gate.', 'dumbouncer'); ?></p>
             <form method="post" action="options.php">
                 <?php settings_fields('dumbouncer'); ?>
                 <table class="form-table" role="presentation">
