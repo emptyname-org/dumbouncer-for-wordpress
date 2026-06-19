@@ -71,8 +71,10 @@ class Dumbouncer {
     }
 
     /**
-     * The three hidden fields every protected form carries. Values start empty;
-     * the browser solves a challenge and fills them before submission.
+     * The three hidden fields every protected form carries. Values start empty.
+     * The browser solves a challenge and fills them before submission.
+     * dumbouncer_nonce is the hashcash proof-of-work nonce (an integer the
+     * browser finds), not a WordPress security nonce.
      */
     public function hidden_fields() {
         $this->need_assets();
@@ -84,6 +86,11 @@ class Dumbouncer {
     /* ------------------------------------------------------------- REST API */
 
     public function register_routes() {
+        // Both routes are intentionally public (permission_callback __return_true):
+        // a contact form must work for logged-out visitors. The /submit endpoint
+        // is open by design, but every submission is gated by the proof of work
+        // (verify + single-use spend) before any mail is sent - that PoW cost is
+        // the abuse protection in place of an authentication check.
         register_rest_route('dumbouncer/v1', '/challenge', array(
             'methods'             => 'GET',
             'permission_callback' => '__return_true',

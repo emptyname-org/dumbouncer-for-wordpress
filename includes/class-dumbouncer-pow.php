@@ -18,7 +18,11 @@ class Dumbouncer_PoW {
     /** Seconds a freshly issued challenge stays valid. */
     const WINDOW = 300;
 
-    /** Max decimal digits accepted for a nonce (bounds verify input). */
+    /**
+     * Max decimal digits accepted for a nonce (bounds verify input).
+     * NOTE: "nonce" here is the hashcash proof-of-work nonce - the integer the
+     * browser searches for - NOT a WordPress security nonce (wp_create_nonce).
+     */
     const MAXNONCE = 19;
 
     /** Difficulty in leading zero bits, clamped to a sane range. */

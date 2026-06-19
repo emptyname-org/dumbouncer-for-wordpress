@@ -2,7 +2,7 @@
 Contributors: emptyname
 Tags: spam, anti-spam, proof of work, hashcash, contact form, comments, captcha alternative
 Requires at least: 5.6
-Tested up to: 6.5
+Tested up to: 7.0
 Requires PHP: 7.0
 Stable tag: 1.0.0
 License: CC0 1.0 Universal
@@ -60,6 +60,10 @@ Set the difficulty in bits under Settings -> Dumbouncer. 20 bits is about a mill
 = Should I protect the login form? =
 
 Only if you understand the trade-off. If a visitor's JavaScript fails, they cannot solve the proof and cannot log in. It is off by default for that reason.
+
+= The contact endpoint is public. Is that safe? =
+
+Yes, by design. The REST submit endpoint is open so logged-out visitors can use the contact form, but every submission must carry a valid, single-use proof of work before any mail is sent. That CPU cost is the abuse protection, in place of an authentication check.
 
 == Changelog ==
 
