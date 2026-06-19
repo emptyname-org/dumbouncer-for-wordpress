@@ -1,0 +1,27 @@
+/* Minimal styling for the [dumbouncer_form] shortcode. Host-form integrations
+   (Contact Form 7, WPForms, comments, login) keep their own styling. */
+
+.dumbouncer-form { display: flex; flex-direction: column; gap: 0.6rem; max-width: 32rem; }
+.dumbouncer-form .dumbouncer-title { margin: 0 0 0.25rem; }
+.dumbouncer-form input,
+.dumbouncer-form textarea {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+.dumbouncer-form textarea { min-height: 7rem; resize: vertical; }
+.dumbouncer-form button {
+  align-self: flex-start;
+  padding: 0.55rem 1.1rem;
+  font: inherit;
+  color: #fff;
+  background: #333;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.dumbouncer-form button:hover { background: #111; }
+.dumbouncer-form.dumbouncer-sending { opacity: 0.7; pointer-events: none; }
+.dumbouncer-status { font-size: 0.9rem; min-height: 1.2em; }

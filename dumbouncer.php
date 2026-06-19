@@ -1,0 +1,59 @@
+<?php
+/**
+ * Plugin Name:       Dumbouncer
+ * Plugin URI:        https://github.com/emptyname-org/Dumbouncer
+ * Description:       Proof-of-work spam gate. Dumb bots bounce. Humans and agents solve the proof. No CAPTCHA, no third party. Protects the built-in contact shortcode, comments, Contact Form 7, WPForms, and login/registration.
+ * Version:           1.0.0
+ * Requires at least: 5.6
+ * Requires PHP:      7.0
+ * Author:            emptyname
+ * License:           CC0 1.0 Universal
+ * License URI:       https://creativecommons.org/publicdomain/zero/1.0/
+ * Text Domain:       dumbouncer
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+define('DUMBOUNCER_VERSION', '1.0.0');
+define('DUMBOUNCER_FILE', __FILE__);
+define('DUMBOUNCER_DIR', plugin_dir_path(__FILE__));
+define('DUMBOUNCER_URL', plugin_dir_url(__FILE__));
+
+require_once DUMBOUNCER_DIR . 'includes/class-dumbouncer-pow.php';
+require_once DUMBOUNCER_DIR . 'includes/class-dumbouncer.php';
+require_once DUMBOUNCER_DIR . 'includes/class-dumbouncer-integrations.php';
+require_once DUMBOUNCER_DIR . 'includes/class-dumbouncer-settings.php';
+
+add_action('plugins_loaded', function () {
+    Dumbouncer::instance()->init();
+    if (is_admin()) {
+        Dumbouncer_Settings::init();
+    }
+});
+
+/* ---- activation / deactivation ---------------------------------------- */
+
+register_activation_hook(__FILE__, function () {
+    // Generate the HMAC secret now so the first request never has to.
+    Dumbouncer_PoW::secret();
+    // Seed defaults without overwriting anything an admin already set.
+    add_option('dumbouncer_bits', 20);
+    add_option('dumbouncer_subject', '[contact] ');
+    add_option('dumbouncer_int_comments', '1');
+    add_option('dumbouncer_int_cf7', '1');
+    add_option('dumbouncer_int_wpforms', '1');
+    add_option('dumbouncer_int_login', '');
+    add_option('dumbouncer_int_register', '');
+    if (!wp_next_scheduled('dumbouncer_gc')) {
+        wp_schedule_event(time() + 3600, 'hourly', 'dumbouncer_gc');
+    }
+});
+
+register_deactivation_hook(__FILE__, function () {
+    $ts = wp_next_scheduled('dumbouncer_gc');
+    if ($ts) {
+        wp_unschedule_event($ts, 'dumbouncer_gc');
+    }
+});
