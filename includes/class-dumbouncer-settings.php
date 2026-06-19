@@ -83,7 +83,7 @@ class Dumbouncer_Settings {
                         <td>
                             <input type="number" id="dumbouncer_bits" name="dumbouncer_bits" min="8" max="32"
                                    value="<?php echo esc_attr(get_option('dumbouncer_bits', 20)); ?>" class="small-text">
-                            <p class="description"><?php esc_html_e('Number of leading zero bits. 20 is roughly 0.5-1s in a browser. Higher is harder for both spam and users.', 'dumbouncer'); ?></p>
+                            <p class="description"><?php esc_html_e('Number of leading zero bits. 20 is roughly 0.5-1s in a browser.', 'dumbouncer'); ?></p>
                         </td>
                     </tr>
                     <tr>
