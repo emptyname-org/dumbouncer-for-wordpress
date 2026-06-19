@@ -8,7 +8,7 @@ Stable tag: 1.0.0
 License: CC0 1.0 Universal
 License URI: https://creativecommons.org/publicdomain/zero/1.0/
 
-Proof-of-work spam gate. Dumb bots bounce. Humans and agents solve the proof. No CAPTCHA, no third party, no tracking.
+Intelligent agent friendly proof-of-work spam gate. Protects contact shortcode, comments, Contact Form 7, WPForms, and login/registration.
 
 == Description ==
 

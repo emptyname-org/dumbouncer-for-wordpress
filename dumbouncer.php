@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Dumbouncer
  * Plugin URI:        https://github.com/emptyname-org/Dumbouncer
- * Description:       Proof-of-work spam gate. Dumb bots bounce. Humans and agents solve the proof. No CAPTCHA, no third party. Protects the built-in contact shortcode, comments, Contact Form 7, WPForms, and login/registration.
+ * Description:       Intelligent agent friendly proof-of-work spam gate. Protects the built-in contact shortcode, comments, Contact Form 7, WPForms, and login/registration.
  * Version:           1.0.0
  * Requires at least: 5.6
  * Requires PHP:      7.0
