@@ -104,6 +104,7 @@ class Dumbouncer_Settings {
                 </table>
                 <?php submit_button(); ?>
             </form>
+            <p><a href="<?php echo esc_url(DUMBOUNCER_HOME); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Source code and issues on GitHub', 'dumbouncer'); ?></a></p>
         </div>
         <?php
     }

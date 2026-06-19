@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       Dumbouncer
- * Plugin URI:        https://github.com/emptyname-org/Dumbouncer
+ * Plugin URI:        https://github.com/emptyname-org/dumbouncer-for-wordpress
  * Description:       Intelligent agent friendly proof-of-work spam gate. Protects comments, Contact Form 7, WPForms, and login/registration.
  * Version:           1.0.0
  * Requires at least: 5.6
@@ -20,6 +20,7 @@ define('DUMBOUNCER_VERSION', '1.0.0');
 define('DUMBOUNCER_FILE', __FILE__);
 define('DUMBOUNCER_DIR', plugin_dir_path(__FILE__));
 define('DUMBOUNCER_URL', plugin_dir_url(__FILE__));
+define('DUMBOUNCER_HOME', 'https://github.com/emptyname-org/dumbouncer-for-wordpress');
 
 require_once DUMBOUNCER_DIR . 'includes/class-dumbouncer-pow.php';
 require_once DUMBOUNCER_DIR . 'includes/class-dumbouncer.php';
