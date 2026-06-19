@@ -21,7 +21,7 @@ class Dumbouncer_Integrations {
         return get_option('dumbouncer_int_' . $key, $default) === '1';
     }
 
-    private static function fields() {
+    public static function fields() {
         echo Dumbouncer::instance()->hidden_fields(); // phpcs:ignore WordPress.Security.EscapeOutput
     }
 
@@ -35,7 +35,10 @@ class Dumbouncer_Integrations {
         }
 
         /* ---- Contact Form 7 --------------------------------------------- */
-        if (self::on('cf7') && defined('WPCF7_VERSION')) {
+        // These hooks only fire when the host plugin renders or processes a
+        // form, so registering them on the toggle alone is safe and avoids
+        // plugin-load-order races (the host may define itself after us).
+        if (self::on('cf7')) {
             add_filter('wpcf7_form_hidden_fields', array(__CLASS__, 'cf7_hidden_fields'));
             add_filter('wpcf7_spam', array(__CLASS__, 'cf7_spam'), 9);
             // Make sure our assets load wherever a CF7 form is rendered.
@@ -43,7 +46,7 @@ class Dumbouncer_Integrations {
         }
 
         /* ---- WPForms ---------------------------------------------------- */
-        if (self::on('wpforms') && function_exists('wpforms')) {
+        if (self::on('wpforms')) {
             add_action('wpforms_display_submit_before', array(__CLASS__, 'fields'));
             add_action('wpforms_process', array(__CLASS__, 'check_wpforms'), 10, 3);
         }
