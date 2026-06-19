@@ -75,9 +75,6 @@ class Dumbouncer_Settings {
         <div class="wrap">
             <h1>Dumbouncer</h1>
             <p><?php esc_html_e('Intelligent agent friendly proof-of-work spam gate.', 'dumbouncer'); ?></p>
-            <p class="description" style="max-width:46em">
-                <?php esc_html_e('Dumbouncer only verifies a proof of work on the forms you enable below. It does not send mail or change where any form delivers - each form keeps its own settings.', 'dumbouncer'); ?>
-            </p>
             <form method="post" action="options.php">
                 <?php settings_fields('dumbouncer'); ?>
                 <table class="form-table" role="presentation">
