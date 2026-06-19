@@ -96,7 +96,7 @@ class Dumbouncer_Settings {
                             self::checkbox('dumbouncer_int_wpforms', __('WPForms', 'dumbouncer'), '1',
                                 function_exists('wpforms') ? '' : __('(plugin not detected)', 'dumbouncer'));
                             self::checkbox('dumbouncer_int_login', __('Login form', 'dumbouncer'), '',
-                                __('(Off by default. May lock you out if browser)', 'dumbouncer'));
+                                __('(Off by default. May lock you out of browser)', 'dumbouncer'));
                             self::checkbox('dumbouncer_int_register', __('Registration form', 'dumbouncer'), '');
                             ?>
                         </td>
