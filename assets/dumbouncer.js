@@ -1,12 +1,9 @@
-/* Dumbouncer browser solver. Two jobs on a page:
-   1. Our own contact form (form.dumbouncer-form): on submit, solve a fresh
-      challenge and POST to the REST endpoint, with an animated status.
-   2. Any host form carrying our hidden fields (Contact Form 7, WPForms,
-      comments, login, register): pre-solve a challenge when the user starts
-      interacting and fill the hidden fields, so the host plugin submits a valid
-      proof with its own request. No work happens until the user engages, so the
-      page stays cache-friendly.
-   Same hashcash scheme as the standalone solver. No library. */
+/* Dumbouncer browser solver.
+   For any form carrying Dumbouncer's hidden fields (Contact Form 7, WPForms,
+   comments, login, register): when the user starts interacting, fetch a
+   challenge, solve it, and fill the hidden fields, so the host form submits a
+   valid proof with its own request. No work happens until the user engages, so
+   the page stays cache-friendly. Hashcash, SHA-256 partial preimage. No library. */
 (function () {
   "use strict";
 
@@ -61,7 +58,6 @@
     return h0 >>> 0;
   }
 
-  /* --- networking + solving --- */
   function fetchChallenge(cb) {
     fetch(cfg.challenge_url, { credentials: "same-origin", cache: "no-store" })
       .then(function (r) { return r.json(); })
@@ -91,57 +87,8 @@
     if (n) { n.value = nonce; }
   }
 
-  /* --- mode 1: our own contact form --- */
-  function status(form, msg, color) {
-    var el = form.querySelector(".dumbouncer-status");
-    if (!el) { return; }
-    el.style.color = color; el.textContent = msg;
-  }
-  function ownForm(form) {
-    var dots = null;
-    function startDots() {
-      var n = 0;
-      status(form, cfg.sending, "#0a0");
-      dots = setInterval(function () {
-        n = (n + 1) % 4;
-        var el = form.querySelector(".dumbouncer-status");
-        if (el) { el.textContent = cfg.sending + new Array(n + 1).join("."); }
-      }, 400);
-    }
-    function stopDots() { if (dots) { clearInterval(dots); dots = null; } }
-    function finish(msg, color) { stopDots(); form._dbBusy = false; form.classList.remove("dumbouncer-sending"); status(form, msg, color); }
-
-    function flow(allowSolve) {
-      fetchChallenge(function (ch) {
-        if (!ch) { finish(cfg.failed, "orange"); return; }
-        solve(ch, function (nonce) {
-          setFields(form, ch.challenge, ch.sig, nonce);
-          fetch(cfg.submit_url, { method: "POST", body: new FormData(form), credentials: "same-origin" })
-            .then(function (r) { return r.json(); })
-            .then(function (j) {
-              if (j && j.need_proof) { if (allowSolve) { flow(false); } else { finish(cfg.failed, "orange"); } return; }
-              if (j && j.code === 1)      { finish(cfg.sent, "#0a0"); form.reset(); }
-              else if (j && j.code === 3) { finish(cfg.bad_email, "orange"); }
-              else if (j && j.code === 4) { finish(cfg.missing, "orange"); }
-              else                        { finish(cfg.failed, "orange"); }
-            })
-            .catch(function () { finish(cfg.failed, "orange"); });
-        });
-      });
-    }
-
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (form._dbBusy) { return; }
-      var email = form.querySelector('[name="email"]'), msg = form.querySelector('[name="message"]');
-      if ((email && !email.value.trim()) || (msg && !msg.value.trim())) { status(form, cfg.missing, "orange"); return; }
-      form._dbBusy = true; form.classList.add("dumbouncer-sending"); startDots();
-      flow(true);
-    });
-  }
-
-  /* --- mode 2: a host form we only feed hidden fields --- */
-  function hostForm(form) {
+  /* Keep a freshly solved, unused proof in a form's hidden fields. */
+  function manage(form) {
     var solving = false, ready = false, ts = 0;
     function ensure() {
       if (solving) { return; }
@@ -165,12 +112,11 @@
   }
 
   function boot() {
-    each(document.querySelectorAll("form.dumbouncer-form"), ownForm);
     var seen = [];
     each(document.querySelectorAll('input[name="dumbouncer_challenge"]'), function (inp) {
       var f = inp.form;
-      if (!f || f.classList.contains("dumbouncer-form") || seen.indexOf(f) >= 0) { return; }
-      seen.push(f); hostForm(f);
+      if (!f || seen.indexOf(f) >= 0) { return; }
+      seen.push(f); manage(f);
     });
   }
 

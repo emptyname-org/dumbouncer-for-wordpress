@@ -13,8 +13,6 @@ global $wpdb;
 $options = array(
     'dumbouncer_secret',
     'dumbouncer_bits',
-    'dumbouncer_recipient',
-    'dumbouncer_subject',
     'dumbouncer_int_comments',
     'dumbouncer_int_cf7',
     'dumbouncer_int_wpforms',

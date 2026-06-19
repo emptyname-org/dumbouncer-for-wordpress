@@ -1,8 +1,8 @@
 <?php
 /**
- * Settings screen under Settings -> Dumbouncer. Recipient, subject, difficulty,
- * and one toggle per integration. Everything has a working default, so the
- * plugin protects comments and contact forms the moment it is activated.
+ * Settings screen under Settings -> Dumbouncer. Difficulty plus one toggle per
+ * integration. Everything has a working default, so the gate protects comments
+ * and contact forms the moment it is activated.
  */
 
 if (!defined('ABSPATH')) {
@@ -38,8 +38,6 @@ class Dumbouncer_Settings {
 
     public static function register() {
         $opts = array(
-            'dumbouncer_recipient'    => array('sanitize_email', ''),
-            'dumbouncer_subject'      => array('sanitize_text_field', '[contact] '),
             'dumbouncer_bits'         => array('absint', 20),
             'dumbouncer_int_comments' => array(array(__CLASS__, 'bool'), '1'),
             'dumbouncer_int_cf7'      => array(array(__CLASS__, 'bool'), '1'),
@@ -77,9 +75,11 @@ class Dumbouncer_Settings {
         <div class="wrap">
             <h1>Dumbouncer</h1>
             <p><?php esc_html_e('Intelligent agent friendly proof-of-work spam gate.', 'dumbouncer'); ?></p>
+            <p class="description" style="max-width:46em">
+                <?php esc_html_e('Dumbouncer only verifies a proof of work on the forms you enable below. It does not send mail or change where any form delivers - each form keeps its own settings.', 'dumbouncer'); ?>
+            </p>
             <form method="post" action="options.php">
                 <?php settings_fields('dumbouncer'); ?>
-                <h2 class="title"><?php esc_html_e('Protection', 'dumbouncer'); ?></h2>
                 <table class="form-table" role="presentation">
                     <tr>
                         <th scope="row"><label for="dumbouncer_bits"><?php esc_html_e('Difficulty (bits)', 'dumbouncer'); ?></label></th>
@@ -105,30 +105,6 @@ class Dumbouncer_Settings {
                         </td>
                     </tr>
                 </table>
-
-                <h2 class="title"><?php esc_html_e('Built-in contact form', 'dumbouncer'); ?></h2>
-                <p class="description" style="max-width:46em">
-                    <?php esc_html_e('These two settings apply only to the [dumbouncer_form] shortcode below. Comments, Contact Form 7, WPForms, and login use their own (or WordPress) email settings - Dumbouncer only checks the proof of work and never changes where their mail goes.', 'dumbouncer'); ?>
-                </p>
-                <table class="form-table" role="presentation">
-                    <tr>
-                        <th scope="row"><label for="dumbouncer_recipient"><?php esc_html_e('Contact recipient', 'dumbouncer'); ?></label></th>
-                        <td>
-                            <input type="email" id="dumbouncer_recipient" name="dumbouncer_recipient"
-                                   value="<?php echo esc_attr(get_option('dumbouncer_recipient', '')); ?>"
-                                   class="regular-text" placeholder="<?php echo esc_attr(get_option('admin_email')); ?>">
-                            <p class="description"><?php esc_html_e('Leave blank to send to the site admin email.', 'dumbouncer'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="dumbouncer_subject"><?php esc_html_e('Subject prefix', 'dumbouncer'); ?></label></th>
-                        <td><input type="text" id="dumbouncer_subject" name="dumbouncer_subject"
-                                   value="<?php echo esc_attr(get_option('dumbouncer_subject', '[contact] ')); ?>" class="regular-text"></td>
-                    </tr>
-                </table>
-                <p><?php esc_html_e('Add this shortcode to any page or post:', 'dumbouncer'); ?>
-                   <code>[dumbouncer_form title="Contact us"]</code></p>
-
                 <?php submit_button(); ?>
             </form>
         </div>

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Dumbouncer
  * Plugin URI:        https://github.com/emptyname-org/Dumbouncer
- * Description:       Intelligent agent friendly proof-of-work spam gate. Protects the built-in contact shortcode, comments, Contact Form 7, WPForms, and login/registration.
+ * Description:       Intelligent agent friendly proof-of-work spam gate. Protects comments, Contact Form 7, WPForms, and login/registration.
  * Version:           1.0.0
  * Requires at least: 5.6
  * Requires PHP:      7.0
@@ -40,7 +40,6 @@ register_activation_hook(__FILE__, function () {
     Dumbouncer_PoW::secret();
     // Seed defaults without overwriting anything an admin already set.
     add_option('dumbouncer_bits', 20);
-    add_option('dumbouncer_subject', '[contact] ');
     add_option('dumbouncer_int_comments', '1');
     add_option('dumbouncer_int_cf7', '1');
     add_option('dumbouncer_int_wpforms', '1');

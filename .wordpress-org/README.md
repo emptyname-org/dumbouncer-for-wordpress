@@ -14,8 +14,8 @@ create):
 | `icon-256x256.png` | 256x256 | plugin icon (retina) |
 | `banner-772x250.png` | 772x250 | header banner |
 | `banner-1544x500.png` | 1544x500 | header banner (retina) |
-| `screenshot-1.png` | any | the `[dumbouncer_form]` contact form |
-| `screenshot-2.png` | any | Settings -> Dumbouncer screen |
+| `screenshot-1.png` | any | Settings -> Dumbouncer screen |
+| `screenshot-2.png` | any | a protected form (e.g. a comment form) on the front end |
 
 Each `screenshot-N.png` is described by the matching numbered line under the
 `== Screenshots ==` section of `readme.txt` (add that section when the images
