@@ -15,12 +15,12 @@ Intelligent agent friendly proof-of-work spam gate. Protects comments, Contact F
 Dumbouncer is a spam gate. It makes every sender do a small, provable chunk of CPU work before a submission is accepted - cheap for one message, expensive at spam scale. It does not provide its own form and it never sends mail. It protects the forms you already have.
 
 * Humans: the browser solves the challenge automatically. There is no CAPTCHA and nothing to click.
-* Intelligent agents: the challenge states its own rules, so an automated client can read them and solve it too.
+* Intelligent agents: a submission with no proof is answered with the puzzle and its rules, so an automated client can read them, solve it, and resubmit - no JavaScript to reverse-engineer.
 * Dumb bots: clients that POST without running the challenge send no proof and are rejected.
 
 The work is hashcash, the scheme used for Bitcoin mining: find a nonce whose SHA-256 hash is below a target. The browser searches for it. The server verifies it in one hash.
 
-No third party is contacted and no data leaves your server. The challenge is fetched when the visitor starts interacting with a form, not baked into the page, so the plugin works behind full-page caches.
+No third party is contacted and no data leaves your server. The challenge is fetched and solved when the form is submitted, not baked into the page, so the plugin works behind full-page caches.
 
 = What it protects =
 
@@ -47,9 +47,13 @@ It does not stop an attacker who chooses to run the solver. It imposes a per-mes
 
 No. There is no third party. Everything runs on your own server.
 
+= Can automated agents (AI) submit my forms? =
+
+Yes, by design - that is what "agent friendly" means. A client that submits without a proof is handed the puzzle, which states its own rules, so a well-behaved automated client can solve it and resubmit just as a browser does. The per-submission CPU cost still applies, so it raises the price of spam without locking out legitimate automation the way a CAPTCHA does. Dumb bots that ignore the puzzle send no proof and are rejected.
+
 = Will it work with my caching plugin? =
 
-Yes. The challenge is requested when a visitor interacts with a form, not baked into the cached page.
+Yes. The challenge is requested at submit time, not baked into the cached page.
 
 = How hard is the proof? =
 

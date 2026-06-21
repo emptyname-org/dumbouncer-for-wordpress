@@ -1,7 +1,7 @@
 <?php
 /**
  * Dumbouncer plugin bootstrap: the proof-of-work challenge endpoint, the browser
- * solver asset, and the hidden-field helper that every integration reuses.
+ * solver asset, and the form-marker helper that every integration reuses.
  *
  * Dumbouncer is a spam gate only. It does not send mail or provide its own form -
  * it verifies a proof of work on forms that already exist (comments, Contact
