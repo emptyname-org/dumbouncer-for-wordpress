@@ -1,17 +1,15 @@
 /* Dumbouncer browser solver.
-   For any form carrying Dumbouncer's hidden fields (Contact Form 7, WPForms,
-   comments, login, register): when the user starts interacting, fetch a
-   challenge, solve it, and fill the hidden fields, so the host form submits a
-   valid proof with its own request. No work happens until the user engages, so
-   the page stays cache-friendly. Hashcash, SHA-256 partial preimage. No library. */
+   Any form tagged with the hidden dumbouncer_gate field is gated. On submit we
+   intercept, fetch a fresh challenge, solve the hashcash proof, inject the proof
+   fields, and re-fire the form's own submit - so the host (Contact Form 7,
+   WPForms, comments, login) submits once, WITH a valid proof, through its own
+   normal flow. The challenge is minted and solved at submit time: no pre-solve
+   race, no stale challenge. Same scheme as the standalone solver. No library. */
 (function () {
   "use strict";
 
   if (typeof window.DUMBOUNCER === "undefined") { return; }
   var cfg = window.DUMBOUNCER;
-  var WINDOW = 300; // must match Dumbouncer_PoW::WINDOW (seconds)
-
-  function each(list, fn) { Array.prototype.forEach.call(list || [], fn); }
 
   /* --- compact synchronous SHA-256, first 32 bits of the digest --- */
   var K = new Uint32Array([
@@ -78,83 +76,50 @@
     })();
   }
 
-  function setFields(form, challenge, sig, nonce) {
-    var c = form.querySelector('[name="dumbouncer_challenge"]');
-    var s = form.querySelector('[name="dumbouncer_sig"]');
-    var n = form.querySelector('[name="dumbouncer_nonce"]');
-    if (c) { c.value = challenge; }
-    if (s) { s.value = sig; }
-    if (n) { n.value = nonce; }
-  }
-
-  /* Keep a freshly solved, unused proof in a form's hidden fields. */
-  function manage(form) {
-    var solving = false, ready = false, ts = 0;
-    function ensure() {
-      if (solving) { return; }
-      if (ready && (Date.now() - ts) < (WINDOW - 30) * 1000) { return; }
-      solving = true;
-      fetchChallenge(function (ch) {
-        if (!ch) { solving = false; return; }
-        solve(ch, function (nonce) {
-          setFields(form, ch.challenge, ch.sig, nonce);
-          ready = true; ts = Date.now(); solving = false;
-        });
-      });
+  function field(form, name) {
+    var el = form.querySelector('input[name="' + name + '"]');
+    if (!el) {
+      el = document.createElement("input");
+      el.type = "hidden"; el.name = name;
+      form.appendChild(el);
     }
-    form.addEventListener("focusin", ensure);
-    form.addEventListener("input", ensure);
-    form.addEventListener("mousedown", function (e) {
-      if (e.target && (e.target.type === "submit" || e.target.type === "button")) { ensure(); }
-    });
-    // a submitted proof is single-use, so prepare a fresh one for any retry
-    form.addEventListener("submit", function () { ready = false; setTimeout(ensure, 50); });
+    return el;
+  }
+  function setProof(form, ch, nonce) {
+    field(form, "dumbouncer_challenge").value = ch.challenge;
+    field(form, "dumbouncer_sig").value = ch.sig;
+    field(form, "dumbouncer_nonce").value = nonce;
   }
 
-  /* Challenge-on-submit for fetch-based host forms (Contact Form 7, etc.):
-     when a POST comes back as our puzzle, solve it and resubmit the SAME request
-     with the proof appended, transparently to the host plugin's own client. */
-  function installFetchGate() {
-    if (!window.fetch || window.__dumbouncerFetch) { return; }
-    window.__dumbouncerFetch = true;
-    var orig = window.fetch;
-    window.fetch = function (input, init) {
-      return orig.apply(this, arguments).then(function (resp) {
-        var method = (init && init.method) || (input && input.method) || "GET";
-        if (String(method).toUpperCase() !== "POST") { return resp; }
-        var ct = (resp.headers && resp.headers.get && resp.headers.get("content-type")) || "";
-        if (ct.indexOf("application/json") < 0) { return resp; }
-        return resp.clone().json().then(function (j) {
-          var pz = j && j.dumbouncer;
-          if (!pz || !pz.need_proof) { return resp; }
-          var body = init && init.body;
-          if (!body || typeof body.append !== "function") { return resp; } // need a FormData body
-          return new Promise(function (resolve) {
-            solve(pz, function (nonce) {
-              body.append("dumbouncer_challenge", pz.challenge);
-              body.append("dumbouncer_sig", pz.sig);
-              body.append("dumbouncer_nonce", nonce);
-              resolve(orig.call(window, input, init)); // retry once, with the proof
-            });
-          });
-        }).catch(function () { return resp; });
+  function reSubmit(form, submitter) {
+    if (typeof form.requestSubmit === "function") {
+      try { form.requestSubmit(submitter || undefined); return; } catch (e) {}
+    }
+    form.submit(); // native fallback (skips the host's submit listeners, but works for native forms)
+  }
+
+  function onSubmit(e) {
+    var form = e.target;
+    if (!form || form.nodeName !== "FORM" || !form.querySelector) { return; }
+    if (!form.querySelector('input[name="dumbouncer_gate"]')) { return; } // not gated
+    if (form.getAttribute("data-dumbouncer-ready") === "1") {
+      form.removeAttribute("data-dumbouncer-ready"); // our re-fire: let it through
+      return;
+    }
+    // first pass: stop the host from submitting, solve, then re-fire
+    e.preventDefault();
+    if (e.stopImmediatePropagation) { e.stopImmediatePropagation(); }
+    var submitter = e.submitter;
+    fetchChallenge(function (ch) {
+      if (!ch) { return; } // could not get a challenge: leave the form unsubmitted, user can retry
+      solve(ch, function (nonce) {
+        setProof(form, ch, nonce);
+        form.setAttribute("data-dumbouncer-ready", "1");
+        reSubmit(form, submitter);
       });
-    };
-  }
-  installFetchGate();
-
-  function boot() {
-    var seen = [];
-    each(document.querySelectorAll('input[name="dumbouncer_challenge"]'), function (inp) {
-      var f = inp.form;
-      if (!f || seen.indexOf(f) >= 0) { return; }
-      seen.push(f); manage(f);
     });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
+  // Capture phase so we run before the host's own (bubble-phase) submit handler.
+  document.addEventListener("submit", onSubmit, true);
 })();

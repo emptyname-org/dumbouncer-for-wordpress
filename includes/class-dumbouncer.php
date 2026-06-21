@@ -67,16 +67,14 @@ class Dumbouncer {
     }
 
     /**
-     * The three hidden fields every protected form carries. Values start empty.
-     * The browser solves a challenge and fills them before submission.
-     * dumbouncer_nonce is the hashcash proof-of-work nonce (an integer the
-     * browser finds), not a WordPress security nonce.
+     * A marker that tags a form as gated. The browser watches for forms carrying
+     * it and, on submit, solves a fresh challenge and injects the proof fields
+     * before the form's real submission goes out. The proof itself is never
+     * pre-rendered - it is minted and solved at submit time.
      */
-    public function hidden_fields() {
+    public function marker() {
         $this->need_assets();
-        return '<input type="hidden" name="dumbouncer_challenge" value="" autocomplete="off" class="dumbouncer-field">'
-             . '<input type="hidden" name="dumbouncer_sig" value="" autocomplete="off" class="dumbouncer-field">'
-             . '<input type="hidden" name="dumbouncer_nonce" value="" autocomplete="off" class="dumbouncer-field">';
+        return '<input type="hidden" name="dumbouncer_gate" value="1" autocomplete="off">';
     }
 
     /* ------------------------------------------------------------- REST API */

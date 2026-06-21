@@ -69,6 +69,15 @@ class Dumbouncer_PoW {
         );
     }
 
+    /** The self-describing puzzle returned to a submission that has no proof. */
+    public static function puzzle() {
+        $c = self::issue();
+        $c['need_proof'] = true;
+        $c['howto'] = 'Solve nonce per "formula", then resubmit this same form with '
+                    . 'dumbouncer_challenge and dumbouncer_sig unchanged plus dumbouncer_nonce added.';
+        return $c;
+    }
+
     /**
      * Verify a submitted (challenge, sig, nonce). One SHA-256.
      * Checks: we signed this challenge (timing-safe), it is still fresh, and the
