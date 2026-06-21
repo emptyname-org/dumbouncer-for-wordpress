@@ -34,14 +34,14 @@ class Dumbouncer_Integrations {
             add_filter('preprocess_comment', array(__CLASS__, 'check_comment'));
         }
 
-        /* ---- Contact Form 7 --------------------------------------------- */
-        // These hooks only fire when the host plugin renders or processes a
-        // form, so registering them on the toggle alone is safe and avoids
-        // plugin-load-order races (the host may define itself after us).
+        /* ---- Contact Form 7 (challenge-on-submit) ----------------------- */
+        // Gate the CF7 feedback REST route before CF7 runs. A submission with
+        // no valid proof gets the puzzle back and is not processed; the solver
+        // (browser JS or an agent) solves and resubmits, and the second request
+        // carries a valid proof and is let through. Same two-phase exchange as
+        // the standalone handler.
         if (self::on('cf7')) {
-            add_filter('wpcf7_form_hidden_fields', array(__CLASS__, 'cf7_hidden_fields'));
-            add_filter('wpcf7_spam', array(__CLASS__, 'cf7_spam'), 9);
-            // Make sure our assets load wherever a CF7 form is rendered.
+            add_filter('rest_pre_dispatch', array(__CLASS__, 'cf7_gate'), 10, 3);
             add_filter('wpcf7_form_elements', array(__CLASS__, 'mark_assets'));
         }
 
@@ -83,24 +83,43 @@ class Dumbouncer_Integrations {
 
     /* --------------------------------------------------------------- CF7 */
 
-    public static function cf7_hidden_fields($fields) {
-        Dumbouncer::instance()->need_assets();
-        $fields['dumbouncer_challenge'] = '';
-        $fields['dumbouncer_sig']       = '';
-        $fields['dumbouncer_nonce']     = '';
-        return $fields;
-    }
-
+    /** Load the solver wherever a CF7 form is rendered. */
     public static function mark_assets($elements) {
         Dumbouncer::instance()->need_assets();
         return $elements;
     }
 
-    public static function cf7_spam($spam) {
-        if ($spam) {
-            return $spam; // already flagged by something else
+    /**
+     * Intercept the CF7 feedback submission. No valid, unused proof -> return
+     * the self-describing puzzle and let CF7 do nothing. Valid proof -> return
+     * null so the request continues to CF7's own handler.
+     */
+    public static function cf7_gate($result, $server, $request) {
+        if ($result !== null) {
+            return $result; // a response is already set, leave it
         }
-        return !Dumbouncer_PoW::passes_from_post();
+        $route = $request->get_route();
+        if ($request->get_method() !== 'POST'
+            || strpos($route, '/contact-form-7/v1/contact-forms/') !== 0
+            || substr($route, -9) !== '/feedback') {
+            return $result;
+        }
+
+        $p = $request->get_params();
+        $challenge = isset($p['dumbouncer_challenge']) ? (string) $p['dumbouncer_challenge'] : '';
+        $sig       = isset($p['dumbouncer_sig'])       ? (string) $p['dumbouncer_sig']       : '';
+        $nonce     = isset($p['dumbouncer_nonce'])     ? (string) $p['dumbouncer_nonce']     : '';
+
+        if (Dumbouncer_PoW::verify($challenge, $sig, $nonce) && Dumbouncer_PoW::spend($challenge)) {
+            return $result; // valid and single-use -> let CF7 handle it
+        }
+
+        // No valid proof: hand back the puzzle. CF7 never runs for this request.
+        $c = Dumbouncer_PoW::issue();
+        $c['need_proof'] = true;
+        $c['howto'] = 'Solve nonce per "formula", then resubmit this same form with '
+                    . 'dumbouncer_challenge and dumbouncer_sig unchanged plus dumbouncer_nonce added.';
+        return new WP_REST_Response(array('dumbouncer' => $c), 200);
     }
 
     /* ----------------------------------------------------------- WPForms */

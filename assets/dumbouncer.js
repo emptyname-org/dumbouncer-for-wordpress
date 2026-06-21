@@ -111,6 +111,38 @@
     form.addEventListener("submit", function () { ready = false; setTimeout(ensure, 50); });
   }
 
+  /* Challenge-on-submit for fetch-based host forms (Contact Form 7, etc.):
+     when a POST comes back as our puzzle, solve it and resubmit the SAME request
+     with the proof appended, transparently to the host plugin's own client. */
+  function installFetchGate() {
+    if (!window.fetch || window.__dumbouncerFetch) { return; }
+    window.__dumbouncerFetch = true;
+    var orig = window.fetch;
+    window.fetch = function (input, init) {
+      return orig.apply(this, arguments).then(function (resp) {
+        var method = (init && init.method) || (input && input.method) || "GET";
+        if (String(method).toUpperCase() !== "POST") { return resp; }
+        var ct = (resp.headers && resp.headers.get && resp.headers.get("content-type")) || "";
+        if (ct.indexOf("application/json") < 0) { return resp; }
+        return resp.clone().json().then(function (j) {
+          var pz = j && j.dumbouncer;
+          if (!pz || !pz.need_proof) { return resp; }
+          var body = init && init.body;
+          if (!body || typeof body.append !== "function") { return resp; } // need a FormData body
+          return new Promise(function (resolve) {
+            solve(pz, function (nonce) {
+              body.append("dumbouncer_challenge", pz.challenge);
+              body.append("dumbouncer_sig", pz.sig);
+              body.append("dumbouncer_nonce", nonce);
+              resolve(orig.call(window, input, init)); // retry once, with the proof
+            });
+          });
+        }).catch(function () { return resp; });
+      });
+    };
+  }
+  installFetchGate();
+
   function boot() {
     var seen = [];
     each(document.querySelectorAll('input[name="dumbouncer_challenge"]'), function (inp) {
