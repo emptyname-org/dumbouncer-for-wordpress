@@ -98,24 +98,56 @@
     form.submit(); // native fallback (skips the host's submit listeners, but works for native forms)
   }
 
+  function isCf7(form) {
+    return form.classList && form.classList.contains("wpcf7-form");
+  }
+
   function onSubmit(e) {
     var form = e.target;
     if (!form || form.nodeName !== "FORM" || !form.querySelector) { return; }
     if (!form.querySelector('input[name="dumbouncer_gate"]')) { return; } // not gated
+
     if (form.getAttribute("data-dumbouncer-ready") === "1") {
-      form.removeAttribute("data-dumbouncer-ready"); // our re-fire: let it through
+      // our own re-fire: hand control to the host and stop guarding
+      form.removeAttribute("data-dumbouncer-ready");
+      form.removeAttribute("data-dumbouncer-busy");
       return;
     }
-    // first pass: stop the host from submitting, solve, then re-fire
+
+    // stop the host from submitting this round
     e.preventDefault();
     if (e.stopImmediatePropagation) { e.stopImmediatePropagation(); }
+
+    // busy flag: ignore extra clicks while a solve is already running
+    if (form.getAttribute("data-dumbouncer-busy") === "1") { return; }
+    form.setAttribute("data-dumbouncer-busy", "1");
+
+    // Show the host's own "working" UI during the solve. For Contact Form 7 that
+    // is its native spinner, shown purely by the "submitting" class on the form;
+    // CF7 removes it itself when it renders the result.
+    var cf7 = isCf7(form);
+    var prevStatus = cf7 ? form.getAttribute("data-status") : null;
+    if (cf7) {
+      form.classList.add("submitting");
+      form.setAttribute("data-status", "submitting");
+    }
+
     var submitter = e.submitter;
     fetchChallenge(function (ch) {
-      if (!ch) { return; } // could not get a challenge: leave the form unsubmitted, user can retry
+      if (!ch) {
+        // could not get a challenge: undo the working UI, let the user retry
+        if (cf7) {
+          form.classList.remove("submitting");
+          if (prevStatus === null) { form.removeAttribute("data-status"); }
+          else { form.setAttribute("data-status", prevStatus); }
+        }
+        form.removeAttribute("data-dumbouncer-busy");
+        return;
+      }
       solve(ch, function (nonce) {
         setProof(form, ch, nonce);
         form.setAttribute("data-dumbouncer-ready", "1");
-        reSubmit(form, submitter);
+        reSubmit(form, submitter); // re-fires; the ready branch above lets it through to the host
       });
     });
   }
