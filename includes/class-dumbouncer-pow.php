@@ -56,16 +56,24 @@ class Dumbouncer_PoW {
 
     /** Issue a fresh, signed, self-describing challenge. */
     public static function issue() {
-        $challenge = bin2hex(random_bytes(8)) . ':' . time();
+        $now = time();
+        $challenge = bin2hex(random_bytes(8)) . ':' . $now;
         return array(
-            'challenge' => $challenge,
-            'sig'       => self::sign($challenge),
-            'target'    => self::target(),
-            'bits'      => self::bits(),
-            'scheme'    => 'hashcash-sha256',
-            'formula'   => 'find an integer nonce so that the first 4 bytes of '
-                         . 'SHA-256(challenge + ":" + nonce), read as a big-endian '
-                         . 'integer, are <= target',
+            'challenge'  => $challenge,
+            'sig'        => self::sign($challenge),
+            'target'     => self::target(),
+            'bits'       => self::bits(),
+            'scheme'     => 'hashcash-sha256',
+            'formula'    => 'find an integer nonce so that the first 4 bytes of '
+                          . 'SHA-256(challenge + ":" + nonce), read as a big-endian '
+                          . 'integer, are <= target',
+            // Validity window, stated explicitly so a client need not guess what
+            // the timestamp in "challenge" means. The trailing number there is
+            // the issue time; this challenge is accepted until expires_at. These
+            // fields are advisory - the server enforces the window itself.
+            'issued_at'  => $now,
+            'expires_at' => $now + self::WINDOW,
+            'ttl'        => self::WINDOW,
         );
     }
 
@@ -74,7 +82,9 @@ class Dumbouncer_PoW {
         $c = self::issue();
         $c['need_proof'] = true;
         $c['howto'] = 'Solve nonce per "formula", then resubmit this same form with '
-                    . 'dumbouncer_challenge and dumbouncer_sig unchanged plus dumbouncer_nonce added.';
+                    . 'dumbouncer_challenge and dumbouncer_sig unchanged plus dumbouncer_nonce added. '
+                    . 'This challenge is valid until "expires_at" (unix seconds); you may reuse it until '
+                    . 'then, after which request a new one.';
         return $c;
     }
 
