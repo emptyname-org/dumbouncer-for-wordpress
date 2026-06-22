@@ -128,6 +128,10 @@
     var cf7 = isCf7(form);
     var prevStatus = cf7 ? form.getAttribute("data-status") : null;
     if (cf7) {
+      // Mirror CF7's own status change: drop the previous status class (e.g.
+      // "init") when adding "submitting", otherwise the stale class lingers and
+      // its CSS keeps the response message hidden after the form completes.
+      if (prevStatus) { form.classList.remove(prevStatus); }
       form.classList.add("submitting");
       form.setAttribute("data-status", "submitting");
     }
@@ -139,7 +143,7 @@
         if (cf7) {
           form.classList.remove("submitting");
           if (prevStatus === null) { form.removeAttribute("data-status"); }
-          else { form.setAttribute("data-status", prevStatus); }
+          else { form.classList.add(prevStatus); form.setAttribute("data-status", prevStatus); }
         }
         form.removeAttribute("data-dumbouncer-busy");
         return;
