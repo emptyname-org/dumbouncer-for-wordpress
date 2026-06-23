@@ -4,7 +4,7 @@ Tags: spam, anti-spam, proof of work, hashcash, comment spam, captcha alternativ
 Requires at least: 5.6
 Tested up to: 7.0
 Requires PHP: 7.0
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: CC0 1.0 Universal
 License URI: https://creativecommons.org/publicdomain/zero/1.0/
 
@@ -68,6 +68,11 @@ Only if you understand the trade-off. If a visitor's JavaScript fails, they cann
 No. Dumbouncer only verifies the proof of work. Each protected form (Contact Form 7, WPForms, comment notifications) sends its own mail to wherever it is configured.
 
 == Changelog ==
+
+= 1.0.1 =
+* Contact Form 7: show the form's spinner during the proof-of-work solve, and fix the success/error message being hidden by a stale status class.
+* Add a busy flag so a double-click during the solve cannot submit twice.
+* Bump asset version so updated scripts are not served from cache.
 
 = 1.0.0 =
 * Initial release: comments, Contact Form 7, WPForms, and login/registration integrations.
