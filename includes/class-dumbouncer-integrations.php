@@ -45,11 +45,13 @@ class Dumbouncer_Integrations {
             add_filter('rest_pre_dispatch', array(__CLASS__, 'cf7_gate'), 10, 3);
         }
 
-        /* ---- WPForms (admin-ajax) --------------------------------------- */
+        /* ---- WPForms ---------------------------------------------------- */
         if (self::on('wpforms')) {
             add_action('wpforms_display_submit_before', array(__CLASS__, 'echo_marker'));
-            add_action('wp_ajax_nopriv_wpforms_submit', array(__CLASS__, 'wpforms_gate'), 1);
-            add_action('wp_ajax_wpforms_submit', array(__CLASS__, 'wpforms_gate'), 1);
+            // Gate via wpforms_process, which fires for BOTH the ajax and the
+            // non-ajax submit paths. Hooking only the ajax action let a plain
+            // (no-JS) POST to the page be processed without any proof.
+            add_action('wpforms_process', array(__CLASS__, 'wpforms_gate'), 10, 3);
         }
 
         /* ---- Login (default OFF) ---------------------------------------- */
@@ -92,8 +94,10 @@ class Dumbouncer_Integrations {
     /* ----------------------------------------------------------- comments */
 
     public static function comment_gate($comment_post_id) {
-        // Only gate real front-end comment POSTs.
-        if (is_admin() || empty($_POST['dumbouncer_gate'])) {
+        // Enforce on every front-end comment POST. Do NOT key on the
+        // dumbouncer_gate marker - it is client-controlled, so a bot could omit
+        // it to skip the gate. The proof is the only thing that decides.
+        if (is_admin()) {
             return;
         }
         if (self::post_proof_ok()) {
@@ -128,22 +132,35 @@ class Dumbouncer_Integrations {
 
     /* ----------------------------------------------------------- WPForms */
 
-    public static function wpforms_gate() {
-        // Runs before WPForms' own ajax handler (priority 1). Valid proof ->
-        // return and let WPForms process. No proof -> send the puzzle and stop.
-        if (empty($_POST['dumbouncer_gate'])) {
-            return;
-        }
+    public static function wpforms_gate($fields, $entry, $form_data) {
+        // Fires inside WPForms processing for BOTH ajax and non-ajax submits.
+        // Enforce on every submission (no marker check - it is client-controlled).
         if (self::post_proof_ok()) {
+            return; // valid -> let WPForms continue
+        }
+        $form_id = isset($form_data['id']) ? $form_data['id'] : 0;
+        if (!empty(wpforms()->process->errors[$form_id]['header'])) {
             return;
         }
-        wp_send_json(array('dumbouncer' => Dumbouncer_PoW::puzzle()));
+        // Block the submission and point a client (human or agent) at the
+        // challenge endpoint, which returns the formula to solve.
+        wpforms()->process->errors[$form_id]['header'] = sprintf(
+            /* translators: %s: challenge endpoint URL */
+            __('Could not verify this submission (proof of work required). Challenge: %s', 'dumbouncer'),
+            esc_url_raw(rest_url('dumbouncer/v1/challenge'))
+        );
     }
 
     /* ------------------------------------------------------- login / reg */
 
     public static function check_login($user) {
-        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' || empty($_POST['dumbouncer_gate'])) {
+        // Gate interactive credential logins (the wp-login form sends log/pwd).
+        // Do not key on the dumbouncer_gate marker (client-controlled); other
+        // auth contexts (cookies, application passwords) do not POST log/pwd.
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            return $user;
+        }
+        if (!isset($_POST['log']) && !isset($_POST['pwd'])) {
             return $user;
         }
         if (!self::post_proof_ok()) {
