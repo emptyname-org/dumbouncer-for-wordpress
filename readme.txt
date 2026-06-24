@@ -1,6 +1,6 @@
 === Dumbouncer ===
 Contributors: emptyname
-Tags: spam, anti-spam, proof of work, hashcash, captcha alternative
+Tags: spam, anti-spam, proof of work, captcha alternative, AI
 Requires at least: 5.6
 Tested up to: 7.0
 Requires PHP: 7.0
@@ -8,11 +8,11 @@ Stable tag: 1.0.5
 License: CC0 1.0 Universal
 License URI: https://creativecommons.org/publicdomain/zero/1.0/
 
-Intelligent-agent-friendly proof-of-work spam gate. Protects comments, Contact Form 7, WPForms, and login/registration.
+AI friendly POW spam gate. Protects comments, Contact Form 7, WPForms, and login/registration.
 
 == Description ==
 
-Dumbouncer is an intelligent-agent-friendly spam gate. It makes every sender do a small, provable chunk of CPU work before a submission is accepted - cheap for one message, expensive at spam scale. It does not provide its own form and it never sends mail. It protects the forms you already have.
+Dumbouncer is an AI friendly spam gate. It makes every sender do a small, provable chunk of CPU work before a submission is accepted - cheap for one message, expensive at spam scale. It does not provide its own form and it never sends mail. It protects the forms you already have.
 
 * Humans: the browser solves the challenge automatically. There is no CAPTCHA and nothing to click.
 * Intelligent agents: a submission with no proof is answered with the puzzle and its rules, so an automated client can read them, solve it, and resubmit - no JavaScript to reverse-engineer.

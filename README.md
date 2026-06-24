@@ -1,6 +1,6 @@
 # Dumbouncer (WordPress plugin)
 
-**Dumb bots bounce.** A proof-of-work spam gate for WordPress. No CAPTCHA, no third party, no tracking.
+**Dumb bots bounce.** An AI friendly POW spam gate for WordPress. No CAPTCHA, no third party, no tracking.
 
 Every sender solves a small hashcash challenge before a submission is accepted:
 
