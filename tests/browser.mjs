@@ -146,6 +146,14 @@ try {
   ok('register JS-on -> success', /checkemail=registered|Registration complete/i.test(p.url() + await p.content()));
   await ctx.close();
 } catch (e) { ok('register JS-on', false, String(e).slice(0, 90)); }
+try {
+  const { ctx, p } = await page(false); const u = 'dbojs' + Date.now();
+  await p.goto(`${B}/wp-login.php?action=register`, { waitUntil: 'domcontentloaded' });
+  await p.fill('#user_login', u); await p.fill('#user_email', u + '@example.com');
+  await Promise.all([p.waitForNavigation({ timeout: 20000 }).catch(() => {}), p.click('#wp-submit')]);
+  ok('register JS-off -> blocked by gate', /Proof-of-work check failed/i.test(await p.content()));
+  await ctx.close();
+} catch (e) { ok('register JS-off', false, String(e).slice(0, 90)); }
 
 await browser.close();
 console.log(`\nbrowser: ${pass} passed, ${fail} failed, ${skip} skipped`);

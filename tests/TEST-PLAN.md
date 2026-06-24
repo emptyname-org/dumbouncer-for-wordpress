@@ -92,12 +92,17 @@ in-page async spinner. The busy flag still applies.
 
 ### Integration toggles (layer 4)
 
-For comments, CF7, and WPForms: turning the integration **off** must make Dumbouncer
-transparent (no `dumbouncer_gate` marker rendered, solver not enqueued, blind/no-proof
-submit goes straight through); turning it back **on** restores the marker and the gate.
-Verified by marker presence per page and, for comments, the blind-submit outcome
-(off -> posts 302; on -> puzzle). Login/registration default off and are exercised on in
-the agent layer.
+For comments, CF7, WPForms, login, and registration: turning the integration **off**
+must make Dumbouncer transparent (no `dumbouncer_gate` marker rendered, solver not
+enqueued, blind/no-proof submit goes straight through); turning it back **on** restores
+the marker and the gate. Verified by marker presence per page (comments/cf7/wpforms
+content pages, plus wp-login.php for login and ?action=register for registration) and,
+for comments, the blind-submit outcome (off -> posts 302; on -> puzzle).
+
+Login and registration (default off; the suite enables them) are covered to parity with
+the other integrations: no-proof blocked, valid-proof accepted, JS-on/off in the browser,
+toggle off/on, and **transparency** - a wrong password and a duplicate username are
+rejected by WordPress itself, not by the gate (the gate passed, auth/validation failed).
 
 ## What "thorough" means here
 

@@ -94,6 +94,9 @@ list($lc1, $lr1) = form_post($L, array('log' => $AUSER, 'pwd' => $APASS, 'wp-sub
 ck('login correct creds, no proof -> BLOCKED', stripos($lr1, 'Proof-of-work check failed') !== false && $lc1 !== 302);
 list($lc2, ) = form_post($L, solved(array('log' => $AUSER, 'pwd' => $APASS, 'wp-submit' => 'Log In')));
 ck('login correct creds + valid proof -> 302 (logged in)', $lc2 === 302);
+list($lc3, $lr3) = form_post($L, solved(array('log' => $AUSER, 'pwd' => 'WRONG-' . bin2hex(random_bytes(2)), 'wp-submit' => 'Log In')));
+ck('login wrong password + valid proof -> WP rejects, not the gate (transparent)',
+   $lc3 !== 302 && stripos($lr3, 'Proof-of-work') === false && (bool) preg_match('/incorrect|not valid|unknown|isn.t correct/i', $lr3));
 
 echo "== Registration (server gate) ==\n";
 $RG = "$BASE/wp-login.php?action=register"; $u = 'dbo' . substr(bin2hex(random_bytes(4)), 0, 6);
@@ -101,6 +104,9 @@ list(, $rr1) = form_post($RG, array('user_login' => $u, 'user_email' => "$u@exam
 ck('register no proof -> BLOCKED', stripos($rr1, 'Proof-of-work check failed') !== false);
 list($rc2, $rr2) = form_post($RG, solved(array('user_login' => $u, 'user_email' => "$u@example.com", 'wp-submit' => 'Register')));
 ck('register valid proof -> success', stripos($rc2 === 302 ? '' : $rr2, 'registration complete') !== false || $rc2 === 302 || stripos($rr2 . '', 'checkemail') !== false);
+list($rc3, $rr3) = form_post($RG, solved(array('user_login' => $AUSER, 'user_email' => 'dupe@example.com', 'wp-submit' => 'Register')));
+ck('register duplicate username + valid proof -> WP rejects, not the gate (transparent)',
+   stripos($rr3, 'Proof-of-work') === false && (bool) preg_match('/already registered|already in use/i', $rr3));
 
 echo "\nagent: $pass passed, $fail failed, $skip skipped\n";
 exit($fail ? 1 : 0);

@@ -19,9 +19,11 @@ declare -A PAGE=(
   [comments]="$BASE_URL/?p=$COMMENT_POST"
   [cf7]="$BASE_URL/?page_id=$CF7_PAGE"
   [wpforms]="$BASE_URL/?page_id=$WPF_PAGE"
+  [login]="$BASE_URL/wp-login.php?dbo=1"
+  [register]="$BASE_URL/wp-login.php?action=register"
 )
 
-for k in comments cf7 wpforms; do
+for k in comments cf7 wpforms login register; do
   if [ "$k" = wpforms ] && [ -z "${WPF_PAGE:-}" ]; then echo "SKIP  wpforms toggle (WPForms not configured)"; continue; fi
   wp option update "dumbouncer_int_$k" '' >/dev/null 2>&1
   m=$(markers "${PAGE[$k]}"); ck "$k OFF -> no marker on page" "$([ "$m" = 0 ] && echo 1 || echo 0)" "markers=$m"
