@@ -160,9 +160,10 @@ class Dumbouncer_Integrations {
         // Gate interactive credential logins (the wp-login form sends log/pwd).
         // Do not key on the dumbouncer_gate marker (client-controlled); other
         // auth contexts (cookies, application passwords) do not POST log/pwd.
-        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        if (sanitize_text_field(wp_unslash($_SERVER['REQUEST_METHOD'] ?? '')) !== 'POST') {
             return $user;
         }
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- pre-auth gate; the proof of work, not a nonce, is the check (see Dumbouncer_PoW::passes_from_post)
         if (!isset($_POST['log']) && !isset($_POST['pwd'])) {
             return $user;
         }

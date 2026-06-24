@@ -137,9 +137,15 @@ class Dumbouncer_PoW {
 
     /** Read the three proof fields from $_POST and run the full gate. */
     public static function passes_from_post() {
-        $challenge = isset($_POST['dumbouncer_challenge']) ? (string) wp_unslash($_POST['dumbouncer_challenge']) : '';
-        $sig       = isset($_POST['dumbouncer_sig'])       ? (string) wp_unslash($_POST['dumbouncer_sig'])       : '';
-        $nonce     = isset($_POST['dumbouncer_nonce'])     ? (string) wp_unslash($_POST['dumbouncer_nonce'])     : '';
+        // No WP nonce is used or expected: the proof of work is itself the
+        // anti-forgery check (HMAC signature + single-use spend), and a nonce
+        // could not survive a full-page cache or an automated client. Inputs are
+        // sanitized here, then validated cryptographically in verify().
+        // phpcs:disable WordPress.Security.NonceVerification.Missing
+        $challenge = isset($_POST['dumbouncer_challenge']) ? sanitize_text_field(wp_unslash($_POST['dumbouncer_challenge'])) : '';
+        $sig       = isset($_POST['dumbouncer_sig'])       ? sanitize_text_field(wp_unslash($_POST['dumbouncer_sig']))       : '';
+        $nonce     = isset($_POST['dumbouncer_nonce'])     ? sanitize_text_field(wp_unslash($_POST['dumbouncer_nonce']))     : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
         return self::passes($challenge, $sig, $nonce);
     }
 
@@ -147,6 +153,9 @@ class Dumbouncer_PoW {
     public static function gc() {
         global $wpdb;
         $cutoff = time() - self::WINDOW - 120;
+        // Scheduled cleanup of single-use markers stored as options; a direct
+        // LIKE query is the practical way and there is nothing to cache.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
         $rows = $wpdb->get_results(
             "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE 'dumbouncer_spent_%'"
         );

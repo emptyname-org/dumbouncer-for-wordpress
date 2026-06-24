@@ -10,7 +10,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 
 global $wpdb;
 
-$options = array(
+$dumbouncer_options = array(
     'dumbouncer_secret',
     'dumbouncer_bits',
     'dumbouncer_int_comments',
@@ -19,14 +19,15 @@ $options = array(
     'dumbouncer_int_login',
     'dumbouncer_int_register',
 );
-foreach ($options as $o) {
-    delete_option($o);
+foreach ($dumbouncer_options as $dumbouncer_option) {
+    delete_option($dumbouncer_option);
 }
 
-// Drop any spent-challenge markers that have not yet been pruned.
+// Drop any spent-challenge markers not yet pruned (one-time uninstall cleanup).
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE 'dumbouncer_spent_%'");
 
-$ts = wp_next_scheduled('dumbouncer_gc');
-if ($ts) {
-    wp_unschedule_event($ts, 'dumbouncer_gc');
+$dumbouncer_ts = wp_next_scheduled('dumbouncer_gc');
+if ($dumbouncer_ts) {
+    wp_unschedule_event($dumbouncer_ts, 'dumbouncer_gc');
 }

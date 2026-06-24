@@ -4,8 +4,8 @@ Tags: spam, anti-spam, proof of work, captcha alternative, AI
 Requires at least: 5.6
 Tested up to: 7.0
 Requires PHP: 7.0
-Stable tag: 1.0.5
-License: CC0 1.0 Universal
+Stable tag: 1.0.6
+License: CC0-1.0
 License URI: https://creativecommons.org/publicdomain/zero/1.0/
 
 AI friendly POW spam gate. Protects comments, Contact Form 7, WPForms, and login/registration.
@@ -68,6 +68,9 @@ Only if you understand the trade-off. If a visitor's JavaScript fails, they cann
 No. Dumbouncer only verifies the proof of work. Each protected form (Contact Form 7, WPForms, comment notifications) sends its own mail to wherever it is configured.
 
 == Changelog ==
+
+= 1.0.6 =
+* Compliance: passes WordPress Plugin Check. Sanitize the proof inputs; annotate the intentional no-nonce gate (the proof of work is the anti-forgery check); prefix uninstall variables; mark the cleanup queries. License declared with the SPDX identifier CC0-1.0. No behaviour change.
 
 = 1.0.5 =
 * Robustness: the solver no longer depends on any third-party UI element existing. If a host's spinner or button hooks (e.g. WPForms .wpforms-submit-spinner) are renamed or removed, the gate still works - the form submits with a valid proof, just without the cosmetic spinner. The host UI step is wrapped so it can never abort the submit.
