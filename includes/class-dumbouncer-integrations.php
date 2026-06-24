@@ -38,10 +38,10 @@ class Dumbouncer_Integrations {
             add_action('pre_comment_on_post', array(__CLASS__, 'comment_gate'));
         }
 
-        /* ---- Contact Form 7 (REST + fetch) ------------------------------ */
+        /* ---- Contact Form 7 --------------------------------------------- */
         if (self::on('cf7')) {
+            // cf7_marker adds the gate marker to the form AND loads the solver.
             add_filter('wpcf7_form_hidden_fields', array(__CLASS__, 'cf7_marker'));
-            add_filter('wpcf7_form_elements', array(__CLASS__, 'mark_assets'));
             add_filter('rest_pre_dispatch', array(__CLASS__, 'cf7_gate'), 10, 3);
         }
 
@@ -71,11 +71,6 @@ class Dumbouncer_Integrations {
 
     public static function echo_marker() {
         echo Dumbouncer::instance()->marker(); // phpcs:ignore WordPress.Security.EscapeOutput
-    }
-
-    public static function mark_assets($elements) {
-        Dumbouncer::instance()->need_assets();
-        return $elements;
     }
 
     public static function cf7_marker($fields) {
@@ -124,8 +119,8 @@ class Dumbouncer_Integrations {
         $challenge = isset($p['dumbouncer_challenge']) ? (string) $p['dumbouncer_challenge'] : '';
         $sig       = isset($p['dumbouncer_sig'])       ? (string) $p['dumbouncer_sig']       : '';
         $nonce     = isset($p['dumbouncer_nonce'])     ? (string) $p['dumbouncer_nonce']     : '';
-        if (Dumbouncer_PoW::verify($challenge, $sig, $nonce) && Dumbouncer_PoW::spend($challenge)) {
-            return $result; // valid -> let CF7 handle it
+        if (Dumbouncer_PoW::passes($challenge, $sig, $nonce)) {
+            return $result; // valid (and single-use spent) -> let CF7 handle it
         }
         return new WP_REST_Response(array('dumbouncer' => Dumbouncer_PoW::puzzle()), 200);
     }
