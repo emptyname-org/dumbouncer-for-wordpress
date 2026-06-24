@@ -4,7 +4,7 @@ Tags: spam, anti-spam, proof of work, hashcash, comment spam, captcha alternativ
 Requires at least: 5.6
 Tested up to: 7.0
 Requires PHP: 7.0
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: CC0 1.0 Universal
 License URI: https://creativecommons.org/publicdomain/zero/1.0/
 
@@ -68,6 +68,9 @@ Only if you understand the trade-off. If a visitor's JavaScript fails, they cann
 No. Dumbouncer only verifies the proof of work. Each protected form (Contact Form 7, WPForms, comment notifications) sends its own mail to wherever it is configured.
 
 == Changelog ==
+
+= 1.0.3 =
+* WPForms: show the form's own spinner (disable submit + reveal spinner) during the proof-of-work solve, matching the Contact Form 7 behaviour, so there is immediate feedback on click.
 
 = 1.0.2 =
 * Security: enforce the proof on comments, WPForms, and login based on the proof itself, never on the client-controlled marker field (a bot could omit the marker to skip the gate). Contact Form 7 and registration were already enforced this way.

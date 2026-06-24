@@ -98,8 +98,36 @@
     form.submit(); // native fallback (skips the host's submit listeners, but works for native forms)
   }
 
-  function isCf7(form) {
-    return form.classList && form.classList.contains("wpcf7-form");
+  // Put the host form into its own "submitting" state during the solve, so its
+  // native spinner shows from the click. Returns a function that undoes it
+  // (used only if the challenge fetch fails; otherwise the host takes over on
+  // the re-fire and manages its own teardown).
+  function showWorking(form) {
+    var cls = form.className || "";
+    // Contact Form 7: spinner shown purely by the "submitting" class on the form.
+    if (/(^|\s)wpcf7-form(\s|$)/.test(cls)) {
+      var prev = form.getAttribute("data-status");
+      if (prev) { form.classList.remove(prev); }
+      form.classList.add("submitting");
+      form.setAttribute("data-status", "submitting");
+      return function () {
+        form.classList.remove("submitting");
+        if (prev === null) { form.removeAttribute("data-status"); }
+        else { form.classList.add(prev); form.setAttribute("data-status", prev); }
+      };
+    }
+    // WPForms: disable the submit button and reveal its spinner image.
+    if (/(^|\s)wpforms-form(\s|$)/.test(cls)) {
+      var btn = form.querySelector(".wpforms-submit");
+      var spin = form.querySelector(".wpforms-submit-spinner");
+      if (btn) { btn.disabled = true; }
+      if (spin) { spin.style.display = "inline-block"; }
+      return function () {
+        if (btn) { btn.disabled = false; }
+        if (spin) { spin.style.display = "none"; }
+      };
+    }
+    return function () {}; // native forms (comments, login): no async UI to show
   }
 
   function onSubmit(e) {
@@ -122,29 +150,14 @@
     if (form.getAttribute("data-dumbouncer-busy") === "1") { return; }
     form.setAttribute("data-dumbouncer-busy", "1");
 
-    // Show the host's own "working" UI during the solve. For Contact Form 7 that
-    // is its native spinner, shown purely by the "submitting" class on the form;
-    // CF7 removes it itself when it renders the result.
-    var cf7 = isCf7(form);
-    var prevStatus = cf7 ? form.getAttribute("data-status") : null;
-    if (cf7) {
-      // Mirror CF7's own status change: drop the previous status class (e.g.
-      // "init") when adding "submitting", otherwise the stale class lingers and
-      // its CSS keeps the response message hidden after the form completes.
-      if (prevStatus) { form.classList.remove(prevStatus); }
-      form.classList.add("submitting");
-      form.setAttribute("data-status", "submitting");
-    }
+    // show the host's own "submitting" UI (spinner) during the solve
+    var undoWorking = showWorking(form);
 
     var submitter = e.submitter;
     fetchChallenge(function (ch) {
       if (!ch) {
         // could not get a challenge: undo the working UI, let the user retry
-        if (cf7) {
-          form.classList.remove("submitting");
-          if (prevStatus === null) { form.removeAttribute("data-status"); }
-          else { form.classList.add(prevStatus); form.setAttribute("data-status", prevStatus); }
-        }
+        undoWorking();
         form.removeAttribute("data-dumbouncer-busy");
         return;
       }
