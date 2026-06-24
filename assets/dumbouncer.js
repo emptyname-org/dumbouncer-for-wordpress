@@ -116,14 +116,22 @@
         else { form.classList.add(prev); form.setAttribute("data-status", prev); }
       };
     }
-    // WPForms: disable the submit button and reveal its spinner image.
+    // WPForms: mirror its full processing state from the click - swap the submit
+    // text to the "Sending..." label (data-alt-text), disable the button, and
+    // reveal the spinner. Otherwise the spinner shows but the text only changes
+    // once WPForms takes over after the solve, which looks jerky.
     if (/(^|\s)wpforms-form(\s|$)/.test(cls)) {
       var btn = form.querySelector(".wpforms-submit");
       var spin = form.querySelector(".wpforms-submit-spinner");
-      if (btn) { btn.disabled = true; }
+      var prevText = null;
+      if (btn) {
+        var alt = btn.getAttribute("data-alt-text");
+        if (alt) { prevText = btn.textContent; btn.textContent = alt; }
+        btn.disabled = true;
+      }
       if (spin) { spin.style.display = "inline-block"; }
       return function () {
-        if (btn) { btn.disabled = false; }
+        if (btn) { btn.disabled = false; if (prevText !== null) { btn.textContent = prevText; } }
         if (spin) { spin.style.display = "none"; }
       };
     }
