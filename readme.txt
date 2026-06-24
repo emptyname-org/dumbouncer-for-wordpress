@@ -8,7 +8,7 @@ Stable tag: 1.0.5
 License: CC0 1.0 Universal
 License URI: https://creativecommons.org/publicdomain/zero/1.0/
 
-Intelligent agent friendly proof-of-work spam gate. Protects comments, Contact Form 7, WPForms, and login/registration.
+Intelligent-agent-friendly proof-of-work spam gate. Protects comments, Contact Form 7, WPForms, and login/registration.
 
 == Description ==
 
@@ -33,7 +33,7 @@ Each can be turned on or off under Settings -> Dumbouncer. Dumbouncer only check
 
 = What it is not =
 
-It does not stop an attacker who chooses to run the solver. It imposes a per-message CPU cost. It filters out the cheap, high-volume bots that never run anything.
+It is not a wall. A determined attacker who runs the solver gets through; it only prices out the cheap, high-volume bots that never run the work.
 
 == Installation ==
 
