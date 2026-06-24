@@ -4,3 +4,7 @@
 # editor / OS noise
 .DS_Store
 *.swp
+
+# test suite: generated config + locally-installed playwright
+tests/config.env
+tests/node_modules/
