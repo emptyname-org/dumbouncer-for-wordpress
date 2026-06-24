@@ -97,6 +97,26 @@ if (WPF_PAGE) {
     ok('WPForms JS-on: success + confirmation', success === true && conf > 0, 'success=' + success);
     await ctx.close();
   } catch (e) { ok('WPForms JS-on', false, String(e).slice(0, 90)); }
+
+  // Graceful degradation: if the host's UI hooks are gone (e.g. WPForms renames
+  // or drops .wpforms-submit-spinner / .wpforms-submit), the gate must STILL work
+  // - the form submits with a valid proof, just without the cosmetic spinner.
+  try {
+    const { ctx, p } = await page(true); let success = null;
+    p.on('response', async r => { if (r.request().method() === 'POST' && r.url().includes('admin-ajax')) { try { success = (await r.json()).success; } catch {} } });
+    await p.goto(`${B}/?page_id=${WPF_PAGE}`, { waitUntil: 'domcontentloaded', timeout: 40000 });
+    // Remove only the spinner element our code reaches for - WPForms' own submit
+    // still works; this isolates OUR dependency on .wpforms-submit-spinner.
+    await p.evaluate(() => { document.querySelectorAll('.wpforms-submit-spinner').forEach(e => e.remove()); });
+    await p.fill('.wpforms-form input[type=email]', 'h@example.com');
+    await p.fill('.wpforms-form input[type=text]:not([aria-hidden="true"]):not([tabindex="-1"])', 'Human');
+    const ta = p.locator('.wpforms-form textarea'); if (await ta.count()) await ta.first().fill('hello');
+    await p.click('.wpforms-form button[type=submit], .wpforms-form input[type=submit]', { noWaitAfter: true });
+    await p.waitForFunction(() => document.querySelector('.wpforms-confirmation-container, .wpforms-confirmation-container-full') !== null, { timeout: 25000 }).catch(() => {});
+    const conf = await p.locator('.wpforms-confirmation-container, .wpforms-confirmation-container-full').count();
+    ok('WPForms host UI hooks removed -> still submits with proof (graceful)', success === true && conf > 0, 'success=' + success);
+    await ctx.close();
+  } catch (e) { ok('WPForms graceful degradation', false, String(e).slice(0, 90)); }
 } else sk('WPForms (not configured / not loaded)');
 
 console.log('== Login + Registration (browser) ==');

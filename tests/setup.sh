@@ -44,6 +44,15 @@ fi
 COMMENT_POST=$(wp post list --post_type=post --posts_per_page=1 --field=ID 2>/dev/null | head -1); [ -z "$COMMENT_POST" ] && COMMENT_POST=1
 wp post update "$COMMENT_POST" --comment_status=open >/dev/null 2>&1
 
+# --- Test helper (test env only): disable the comment-flood throttle so the
+#     suite's rapid back-to-back comment submits don't trip "posting too quickly".
+MU="$WPPATH/wp-content/mu-plugins"; mkdir -p "$MU" 2>/dev/null
+cat > "$MU/dbo-test-helpers.php" <<'MUPHP'
+<?php
+// Dumbouncer test helper - install only in throwaway test sites.
+add_filter('comment_flood_filter', '__return_false');
+MUPHP
+
 cat > "$DIR/config.env" <<EOF
 BASE_URL="$BASE"
 CF7_FORM_ID="$CF7_ID"

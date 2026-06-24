@@ -133,13 +133,21 @@ class Dumbouncer_Integrations {
         if (self::post_proof_ok()) {
             return; // valid -> let WPForms continue
         }
-        $form_id = isset($form_data['id']) ? $form_data['id'] : 0;
-        if (!empty(wpforms()->process->errors[$form_id]['header'])) {
+        // Block via WPForms' own error channel. Resolve the process object
+        // defensively (it is a magic __get property, so test with is_object, not
+        // isset): if a future WPForms changes this, degrade (no gate) rather than
+        // fatal the user's form.
+        $proc = function_exists('wpforms') ? wpforms()->process : null;
+        if (!is_object($proc)) {
             return;
         }
-        // Block the submission and point a client (human or agent) at the
-        // challenge endpoint, which returns the formula to solve.
-        wpforms()->process->errors[$form_id]['header'] = sprintf(
+        $form_id = isset($form_data['id']) ? $form_data['id'] : 0;
+        if (!empty($proc->errors[$form_id]['header'])) {
+            return;
+        }
+        // Point a client (human or agent) at the challenge endpoint, which
+        // returns the formula to solve.
+        $proc->errors[$form_id]['header'] = sprintf(
             /* translators: %s: challenge endpoint URL */
             __('Could not verify this submission (proof of work required). Challenge: %s', 'dumbouncer'),
             esc_url_raw(rest_url('dumbouncer/v1/challenge'))

@@ -57,10 +57,27 @@
   }
 
   function fetchChallenge(cb) {
-    fetch(cfg.challenge_url, { credentials: "same-origin", cache: "no-store" })
-      .then(function (r) { return r.json(); })
-      .then(function (j) { cb(j && j.challenge ? j : null); })
-      .catch(function () { cb(null); });
+    var url = cfg.challenge_url;
+    // Prefer fetch; fall back to XMLHttpRequest where fetch is unavailable.
+    if (typeof window.fetch === "function") {
+      window.fetch(url, { credentials: "same-origin", cache: "no-store" })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { cb(j && j.challenge ? j : null); })
+        .catch(function () { cb(null); });
+      return;
+    }
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", url, true);
+      xhr.withCredentials = true;
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) { return; }
+        var j = null;
+        try { j = JSON.parse(xhr.responseText); } catch (e) {}
+        cb(j && j.challenge ? j : null);
+      };
+      xhr.send();
+    } catch (e) { cb(null); }
   }
 
   function solve(ch, cb) {
@@ -95,7 +112,16 @@
     if (typeof form.requestSubmit === "function") {
       try { form.requestSubmit(submitter || undefined); return; } catch (e) {}
     }
-    form.submit(); // native fallback (skips the host's submit listeners, but works for native forms)
+    // Native fallback (skips the host's submit listeners, but works for native
+    // forms). Call the prototype method: a control named "submit" (e.g. the
+    // comment form's button) shadows form.submit, so form.submit() would throw.
+    try {
+      if (window.HTMLFormElement && HTMLFormElement.prototype.submit) {
+        HTMLFormElement.prototype.submit.call(form);
+      } else {
+        form.submit();
+      }
+    } catch (e) {}
   }
 
   // Put the host form into its own "submitting" state during the solve, so its
@@ -138,6 +164,17 @@
     return function () {}; // native forms (comments, login): no async UI to show
   }
 
+  // The host UI above is best-effort and built on third-party class/attribute
+  // names that may change. These wrappers make sure that if any of it is absent
+  // or throws, the gate still works - the form just submits without the spinner.
+  function noop() {}
+  function beginHostUi(form) {
+    try { return showWorking(form) || noop; } catch (e) { return noop; }
+  }
+  function runTeardown(fn) {
+    try { fn(); } catch (e) {}
+  }
+
   function onSubmit(e) {
     var form = e.target;
     if (!form || form.nodeName !== "FORM" || !form.querySelector) { return; }
@@ -158,14 +195,14 @@
     if (form.getAttribute("data-dumbouncer-busy") === "1") { return; }
     form.setAttribute("data-dumbouncer-busy", "1");
 
-    // show the host's own "submitting" UI (spinner) during the solve
-    var undoWorking = showWorking(form);
+    // show the host's own "submitting" UI (spinner) during the solve - best-effort
+    var undoWorking = beginHostUi(form);
 
     var submitter = e.submitter;
     fetchChallenge(function (ch) {
       if (!ch) {
         // could not get a challenge: undo the working UI, let the user retry
-        undoWorking();
+        runTeardown(undoWorking);
         form.removeAttribute("data-dumbouncer-busy");
         return;
       }
