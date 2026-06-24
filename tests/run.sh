@@ -21,6 +21,9 @@ else
   echo "      or export NODE_PATH to a node_modules that has it, then re-run."
 fi
 
+echo; echo "### Layer 4: integration toggles (on/off transparency) ###"
+bash "$DIR/toggles.sh" || fail=1
+
 echo
 [ $fail -eq 0 ] && echo "==> ALL LAYERS PASSED" || echo "==> SOME LAYERS FAILED"
 exit $fail

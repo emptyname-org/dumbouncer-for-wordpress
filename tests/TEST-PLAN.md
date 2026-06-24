@@ -9,11 +9,12 @@ that it is **transparent** to each host's own validation.
 
 | Layer | File | Needs a WP site? | What it covers |
 | --- | --- | --- | --- |
-| PoW core | `pow-core.php` | no (stubs WP) | hashcash issue/verify/spend/expiry/tamper/single-use |
+| PoW core | `pow-core.php` | no (stubs WP) | hashcash issue/verify/spend/expiry/tamper/single-use + **difficulty (bits)** |
 | Server gate (agent/bot) | `agent.php` | yes | per-integration server enforcement over HTTP, incl. bypass attempts |
-| Browser (human) | `browser.mjs` | yes + Playwright | real submit through each host's JS, JS-on/off, spinner, messages |
+| Browser (human) | `browser.mjs` | yes + Playwright | real submit through each host's JS, JS-on/off, spinner, messages, graceful degradation |
+| Toggles (on/off) | `toggles.sh` | yes + wp-cli | each integration off -> transparent (no marker, blind submit goes through); on -> gated again |
 
-`run.sh` runs all three and prints a combined pass/fail.
+`run.sh` runs all four and prints a combined pass/fail.
 
 ## Prerequisites
 
@@ -86,7 +87,17 @@ in-page async spinner. The busy flag still applies.
 - issue() returns challenge/sig/target/bits + issued_at/expires_at/ttl (window correct).
 - verify(correct) true; wrong nonce / forged sig / tampered challenge -> false.
 - passes() true the first time, false on replay (single-use).
-- a challenge older than the window is rejected (expiry).
+- a challenge older than the window is rejected (expiry); far-future rejected.
+- **Difficulty (bits):** the `dumbouncer_bits` option drives `issue()` (bits + `target = 2^(32-bits)-1`); a proof solved to that target verifies; higher bits -> smaller target (harder); bits clamped to 8..32.
+
+### Integration toggles (layer 4)
+
+For comments, CF7, and WPForms: turning the integration **off** must make Dumbouncer
+transparent (no `dumbouncer_gate` marker rendered, solver not enqueued, blind/no-proof
+submit goes straight through); turning it back **on** restores the marker and the gate.
+Verified by marker presence per page and, for comments, the blind-submit outcome
+(off -> posts 302; on -> puzzle). Login/registration default off and are exercised on in
+the agent layer.
 
 ## What "thorough" means here
 

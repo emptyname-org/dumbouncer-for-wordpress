@@ -33,6 +33,23 @@ ck('verify(non-numeric nonce) = false', Dumbouncer_PoW::verify($c['challenge'], 
 ck('passes() first time = true', Dumbouncer_PoW::passes($c['challenge'], $c['sig'], $nonce) === true);
 ck('passes() replay = false (single-use)', Dumbouncer_PoW::passes($c['challenge'], $c['sig'], $nonce) === false);
 
+// --- difficulty: the dumbouncer_bits option drives bits/target, verify honours it ---
+foreach (array(8, 12, 16) as $bits) {
+    $GLOBALS['__opt']['dumbouncer_bits'] = (string) $bits;
+    $cc = Dumbouncer_PoW::issue();
+    ck("bits=$bits -> issue() reports bits and target = 2^(32-bits)-1",
+       $cc['bits'] === $bits && $cc['target'] === (2 ** (32 - $bits)) - 1);
+    $nn = solve($cc['challenge'], $cc['target']);
+    ck("bits=$bits -> a proof solved to that target verifies",
+       Dumbouncer_PoW::verify($cc['challenge'], $cc['sig'], $nn) === true);
+}
+$GLOBALS['__opt']['dumbouncer_bits'] = '10'; $tEasy = Dumbouncer_PoW::target();
+$GLOBALS['__opt']['dumbouncer_bits'] = '18'; $tHard = Dumbouncer_PoW::target();
+ck('higher bits -> smaller target (harder)', $tHard < $tEasy);
+$GLOBALS['__opt']['dumbouncer_bits'] = '99'; ck('bits clamped to <= 32', Dumbouncer_PoW::bits() === 32);
+$GLOBALS['__opt']['dumbouncer_bits'] = '3';  ck('bits clamped to >= 8',  Dumbouncer_PoW::bits() === 8);
+unset($GLOBALS['__opt']['dumbouncer_bits']);
+
 // expiry: forge a challenge with an old timestamp but a valid sig
 $old = bin2hex(random_bytes(8)) . ':' . (time() - Dumbouncer_PoW::WINDOW - 60);
 $oldSig = Dumbouncer_PoW::sign($old);
