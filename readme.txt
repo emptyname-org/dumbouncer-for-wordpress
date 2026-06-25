@@ -4,7 +4,7 @@ Tags: spam, anti-spam, proof of work, captcha alternative, AI
 Requires at least: 5.6
 Tested up to: 7.0
 Requires PHP: 7.0
-Stable tag: 1.0.6
+Stable tag: 1.0.7
 License: CC0-1.0
 License URI: https://creativecommons.org/publicdomain/zero/1.0/
 
@@ -68,6 +68,9 @@ Only if you understand the trade-off. If a visitor's JavaScript fails, they cann
 No. Dumbouncer only verifies the proof of work. Each protected form (Contact Form 7, WPForms, comment notifications) sends its own mail to wherever it is configured.
 
 == Changelog ==
+
+= 1.0.7 =
+* Deliver the challenge as plain prose instead of a labeled JSON object, so generic hashcash-recognizing bots no longer spot the gate; browsers and prose-reading agents still solve it. Proof fields renamed to opaque a/b/c. Same security model.
 
 = 1.0.6 =
 * Compliance: passes WordPress Plugin Check. Sanitize the proof inputs; annotate the intentional no-nonce gate (the proof of work is the anti-forgery check); prefix uninstall variables; mark the cleanup queries. License declared with the SPDX identifier CC0-1.0. No behaviour change.
