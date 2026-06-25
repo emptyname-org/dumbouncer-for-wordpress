@@ -98,9 +98,12 @@ class Dumbouncer_Integrations {
         if (self::post_proof_ok()) {
             return; // valid -> let WordPress process the comment
         }
-        // No proof -> hand back the puzzle and stop. A browser never reaches
-        // here (it solved first); an agent reads this and resubmits.
-        wp_send_json(array('dumbouncer' => Dumbouncer_PoW::puzzle()));
+        // No proof -> hand back the prose challenge as plain text and stop. A
+        // browser never reaches here (it solved first); an agent reads the
+        // sentence and resubmits with the opaque fields a/b/c.
+        header('Content-Type: text/plain; charset=utf-8');
+        echo esc_html(Dumbouncer_PoW::puzzle_text());
+        exit;
     }
 
     /* --------------------------------------------------------------- CF7 */
@@ -116,13 +119,15 @@ class Dumbouncer_Integrations {
             return $result;
         }
         $p = $request->get_params();
-        $challenge = isset($p['dumbouncer_challenge']) ? (string) $p['dumbouncer_challenge'] : '';
-        $sig       = isset($p['dumbouncer_sig'])       ? (string) $p['dumbouncer_sig']       : '';
-        $nonce     = isset($p['dumbouncer_nonce'])     ? (string) $p['dumbouncer_nonce']     : '';
+        $challenge = isset($p['a']) ? (string) $p['a'] : '';
+        $sig       = isset($p['b']) ? (string) $p['b'] : '';
+        $nonce     = isset($p['c']) ? (string) $p['c'] : '';
         if (Dumbouncer_PoW::passes($challenge, $sig, $nonce)) {
             return $result; // valid (and single-use spent) -> let CF7 handle it
         }
-        return new WP_REST_Response(array('dumbouncer' => Dumbouncer_PoW::puzzle()), 200);
+        // No proof -> return the prose challenge (a bare string, no machine
+        // labels). A browser never hits this blind path; an agent reads it.
+        return new WP_REST_Response(Dumbouncer_PoW::puzzle_text(), 200);
     }
 
     /* ----------------------------------------------------------- WPForms */
@@ -145,13 +150,10 @@ class Dumbouncer_Integrations {
         if (!empty($proc->errors[$form_id]['header'])) {
             return;
         }
-        // Point a client (human or agent) at the challenge endpoint, which
-        // returns the formula to solve.
-        $proc->errors[$form_id]['header'] = sprintf(
-            /* translators: %s: challenge endpoint URL */
-            __('Could not verify this submission (proof of work required). Challenge: %s', 'dumbouncer'),
-            esc_url_raw(rest_url('dumbouncer/v1/challenge'))
-        );
+        // Hand back the prose challenge through WPForms' own error channel: an
+        // agent reads the formula and the opaque fields a/b/c here, while a
+        // browser solved before submitting and never sees it.
+        $proc->errors[$form_id]['header'] = Dumbouncer_PoW::puzzle_text();
     }
 
     /* ------------------------------------------------------- login / reg */

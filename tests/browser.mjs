@@ -52,7 +52,7 @@ if (CF7_PAGE) {
     await p.goto(`${B}/?page_id=${CF7_PAGE}`, { waitUntil: 'domcontentloaded' });
     const st = await p.evaluate(() => ({
       marker: !!document.querySelector('.wpcf7 [name="dumbouncer_gate"]'),
-      proof: !!document.querySelector('.wpcf7 [name="dumbouncer_challenge"]'),
+      proof: !!document.querySelector('.wpcf7 [name="a"]'),
     }));
     // marker is server-rendered; the proof field only exists if JS injected it.
     ok('CF7 JS-off: marker present, no proof injected (cannot pass the gate)', st.marker && !st.proof);
@@ -67,7 +67,7 @@ try {
   await p.fill('#commentform #author', 'H'); await p.fill('#commentform #email', 'h@example.com');
   await p.fill('#commentform #comment', 'browser comment ' + Date.now());
   await Promise.all([p.waitForNavigation({ timeout: 20000 }).catch(() => {}), p.click('#commentform #submit')]);
-  ok('comment JS-on: accepted', /unapproved=|moderation-hash=|#comment-/.test(p.url()) && !/"need_proof"/.test(await p.content()), 'url=' + p.url().replace(B, '').slice(0, 36));
+  ok('comment JS-on: accepted', /unapproved=|moderation-hash=|#comment-/.test(p.url()) && !/begins with four bytes/i.test(await p.content()), 'url=' + p.url().replace(B, '').slice(0, 36));
   await ctx.close();
 } catch (e) { ok('comment JS-on', false, String(e).slice(0, 90)); }
 try {
@@ -76,7 +76,7 @@ try {
   await p.fill('#commentform #author', 'N'); await p.fill('#commentform #email', 'n@example.com');
   await p.fill('#commentform #comment', 'no js');
   await Promise.all([p.waitForNavigation({ timeout: 20000 }).catch(() => {}), p.click('#commentform #submit')]);
-  ok('comment JS-off: blocked by gate', /"need_proof"/.test(await p.content()));
+  ok('comment JS-off: blocked by gate', /begins with four bytes/i.test(await p.content()));
   await ctx.close();
 } catch (e) { ok('comment JS-off', false, String(e).slice(0, 90)); }
 
@@ -124,7 +124,7 @@ try {
   const { ctx, p } = await page(true);
   await p.goto(`${B}/wp-login.php`, { waitUntil: 'domcontentloaded', timeout: 40000 });
   await p.fill('#user_login', AUSER); await p.fill('#user_pass', APASS);
-  await p.waitForFunction(() => { const f = document.querySelector('#loginform [name=dumbouncer_challenge]'); return f && f.value.length > 0; }, { timeout: 20000 }).catch(() => {});
+  await p.waitForFunction(() => { const f = document.querySelector('#loginform [name=a]'); return f && f.value.length > 0; }, { timeout: 20000 }).catch(() => {});
   await Promise.all([p.waitForNavigation({ timeout: 20000 }).catch(() => {}), p.click('#wp-submit')]);
   ok('login JS-on correct creds -> logged in', /\/wp-admin/.test(p.url()), p.url().replace(B, '').slice(0, 24));
   await ctx.close();
@@ -141,7 +141,7 @@ try {
   const { ctx, p } = await page(true); const u = 'dbo' + Date.now();
   await p.goto(`${B}/wp-login.php?action=register`, { waitUntil: 'domcontentloaded' });
   await p.fill('#user_login', u); await p.fill('#user_email', u + '@example.com');
-  await p.waitForFunction(() => { const f = document.querySelector('#registerform [name=dumbouncer_challenge]'); return f && f.value.length > 0; }, { timeout: 20000 }).catch(() => {});
+  await p.waitForFunction(() => { const f = document.querySelector('#registerform [name=a]'); return f && f.value.length > 0; }, { timeout: 20000 }).catch(() => {});
   await Promise.all([p.waitForNavigation({ timeout: 20000 }).catch(() => {}), p.click('#wp-submit')]);
   ok('register JS-on -> success', /checkemail=registered|Registration complete/i.test(p.url() + await p.content()));
   await ctx.close();

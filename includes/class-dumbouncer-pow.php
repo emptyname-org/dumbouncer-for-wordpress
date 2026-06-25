@@ -54,38 +54,36 @@ class Dumbouncer_PoW {
         return hash_hmac('sha256', $challenge, self::secret());
     }
 
-    /** Issue a fresh, signed, self-describing challenge. */
+    /* A fresh signed challenge: array{challenge, sig, target}. "challenge" is
+       random:unix-time (the trailing number is the issue time, for freshness);
+       "target" is the difficulty ceiling. Only these three feed the prose in
+       puzzle_text(); verify() re-derives the window and target itself. */
     public static function issue() {
-        $now = time();
-        $challenge = bin2hex(random_bytes(8)) . ':' . $now;
+        $challenge = bin2hex(random_bytes(8)) . ':' . time();
         return array(
-            'challenge'  => $challenge,
-            'sig'        => self::sign($challenge),
-            'target'     => self::target(),
-            'bits'       => self::bits(),
-            'scheme'     => 'hashcash-sha256',
-            'formula'    => 'find an integer nonce so that the first 4 bytes of '
-                          . 'SHA-256(challenge + ":" + nonce), read as a big-endian '
-                          . 'integer, are <= target',
-            // Validity window, stated explicitly so a client need not guess what
-            // the timestamp in "challenge" means. The trailing number there is
-            // the issue time; this challenge is accepted until expires_at. These
-            // fields are advisory - the server enforces the window itself.
-            'issued_at'  => $now,
-            'expires_at' => $now + self::WINDOW,
-            'ttl'        => self::WINDOW,
+            'challenge' => $challenge,
+            'sig'       => self::sign($challenge),
+            'target'    => self::target(),
         );
     }
 
-    /** The self-describing puzzle returned to a submission that has no proof. */
-    public static function puzzle() {
-        $c = self::issue();
-        $c['need_proof'] = true;
-        $c['howto'] = 'Solve nonce per "formula", then resubmit this same form with '
-                    . 'dumbouncer_challenge and dumbouncer_sig unchanged plus dumbouncer_nonce added. '
-                    . 'This challenge is valid until "expires_at" (unix seconds); you may reuse it until '
-                    . 'then, after which request a new one.';
-        return $c;
+    /**
+     * The challenge as plain-language PROSE, values inline, with NO machine
+     * labels (no scheme / challenge / sig / target keys). Off-the-shelf hashcash
+     * solvers key on that standard schema, so they stop recognising this as a
+     * proof-of-work gate; the browser solver lifts the two hex values + the limit
+     * by shape, and an automated client reads the sentence. The proof rides back
+     * in opaque fields a (token), b (seal), c (number).
+     */
+    public static function puzzle_text() {
+        $c     = self::issue();
+        $token = $c['challenge'];
+        $seal  = $c['sig'];
+        $limit = $c['target'] + 1;   // "less than $limit" == "<= target" for an integer
+        return 'To submit this form find a whole number such that the SHA-256 of '
+             . $token . ':number begins with four bytes that, read as a big-endian integer, '
+             . 'are less than ' . $limit . '. Then re-submit the same form with three added '
+             . 'fields - a = ' . $token . ', b = ' . $seal . ', c = the number you found.';
     }
 
     /**
@@ -142,9 +140,9 @@ class Dumbouncer_PoW {
         // could not survive a full-page cache or an automated client. Inputs are
         // sanitized here, then validated cryptographically in verify().
         // phpcs:disable WordPress.Security.NonceVerification.Missing
-        $challenge = isset($_POST['dumbouncer_challenge']) ? sanitize_text_field(wp_unslash($_POST['dumbouncer_challenge'])) : '';
-        $sig       = isset($_POST['dumbouncer_sig'])       ? sanitize_text_field(wp_unslash($_POST['dumbouncer_sig']))       : '';
-        $nonce     = isset($_POST['dumbouncer_nonce'])     ? sanitize_text_field(wp_unslash($_POST['dumbouncer_nonce']))     : '';
+        $challenge = isset($_POST['a']) ? sanitize_text_field(wp_unslash($_POST['a'])) : '';
+        $sig       = isset($_POST['b']) ? sanitize_text_field(wp_unslash($_POST['b'])) : '';
+        $nonce     = isset($_POST['c']) ? sanitize_text_field(wp_unslash($_POST['c'])) : '';
         // phpcs:enable WordPress.Security.NonceVerification.Missing
         return self::passes($challenge, $sig, $nonce);
     }

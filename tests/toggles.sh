@@ -39,7 +39,7 @@ code=$(post_comment -o /dev/null -w '%{http_code}')
 ck "comments OFF -> blind comment posts (302), gate transparent" "$([ "$code" = 302 ] && echo 1 || echo 0)" "http=$code"
 wp option update dumbouncer_int_comments 1 >/dev/null 2>&1
 body=$(post_comment -s)
-if echo "$body" | grep -q need_proof; then ck "comments ON -> blind comment blocked (puzzle)" 1; else ck "comments ON -> blind comment blocked (puzzle)" 0 "no puzzle"; fi
+if echo "$body" | grep -q "less than"; then ck "comments ON -> blind comment blocked (prose challenge)" 1; else ck "comments ON -> blind comment blocked (prose challenge)" 0 "no challenge"; fi
 
 # Restore the suite default (everything ON, as setup.sh leaves it).
 for k in comments cf7 wpforms login register; do wp option update "dumbouncer_int_$k" 1 >/dev/null 2>&1; done

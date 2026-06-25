@@ -94,6 +94,8 @@ class Dumbouncer {
 
     public function rest_challenge() {
         nocache_headers();
-        return rest_ensure_response(Dumbouncer_PoW::issue());
+        // Prose, not JSON: the browser solver shape-parses it, and it carries no
+        // machine labels for a generic hashcash recognizer to key on.
+        return rest_ensure_response(Dumbouncer_PoW::puzzle_text());
     }
 }

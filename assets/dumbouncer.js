@@ -56,13 +56,26 @@
     return h0 >>> 0;
   }
 
+  // Pull the two hex values and the limit out of the prose challenge by SHAPE,
+  // not by label: token is <16 hex>:<10 digits>, seal is the 64-hex string, the
+  // limit is the number after "less than". Robust to whatever envelope the body
+  // arrives in (bare text or a JSON string). null when it isn't a challenge.
+  function parseChallenge(txt) {
+    txt = String(txt || "");
+    var token = (txt.match(/[0-9a-f]{16}:[0-9]{10}/i) || [])[0];
+    var seal  = (txt.match(/[0-9a-f]{64}/i) || [])[0];
+    var lim   = txt.match(/less than\s+([0-9]+)/i);
+    if (!token || !seal || !lim) { return null; }
+    return { token: token, seal: seal, limit: parseInt(lim[1], 10) };
+  }
+
   function fetchChallenge(cb) {
     var url = cfg.challenge_url;
     // Prefer fetch; fall back to XMLHttpRequest where fetch is unavailable.
     if (typeof window.fetch === "function") {
       window.fetch(url, { credentials: "same-origin", cache: "no-store" })
-        .then(function (r) { return r.json(); })
-        .then(function (j) { cb(j && j.challenge ? j : null); })
+        .then(function (r) { return r.text(); })
+        .then(function (t) { cb(parseChallenge(t)); })
         .catch(function () { cb(null); });
       return;
     }
@@ -72,22 +85,20 @@
       xhr.withCredentials = true;
       xhr.onreadystatechange = function () {
         if (xhr.readyState !== 4) { return; }
-        var j = null;
-        try { j = JSON.parse(xhr.responseText); } catch (e) {}
-        cb(j && j.challenge ? j : null);
+        cb(parseChallenge(xhr.responseText));
       };
       xhr.send();
     } catch (e) { cb(null); }
   }
 
   function solve(ch, cb) {
-    var target = ch.target >>> 0;
-    var prefix = ch.challenge + ":";
+    var limit = ch.limit >>> 0;
+    var prefix = ch.token + ":";
     var nonce = 0;
     (function chunk() {
       var end = nonce + 5000;
       for (; nonce < end; nonce++) {
-        if (sha256_first32(prefix + nonce) <= target) { cb(String(nonce)); return; }
+        if (sha256_first32(prefix + nonce) < limit) { cb(String(nonce)); return; }
       }
       setTimeout(chunk, 0);
     })();
@@ -103,9 +114,9 @@
     return el;
   }
   function setProof(form, ch, nonce) {
-    field(form, "dumbouncer_challenge").value = ch.challenge;
-    field(form, "dumbouncer_sig").value = ch.sig;
-    field(form, "dumbouncer_nonce").value = nonce;
+    field(form, "a").value = ch.token;
+    field(form, "b").value = ch.seal;
+    field(form, "c").value = nonce;
   }
 
   function reSubmit(form, submitter) {

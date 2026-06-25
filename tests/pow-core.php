@@ -17,10 +17,14 @@ function ck($n, $c) { global $pass, $fail; echo ($c ? 'PASS' : 'FAIL') . "  $n\n
 function solve($ch, $t) { for ($n = 0; $n < 80000000; $n++) { if (hexdec(substr(hash('sha256', $ch . ':' . $n), 0, 8)) <= $t) return (string) $n; } return null; }
 
 $c = Dumbouncer_PoW::issue();
-ck('issue() has challenge/sig/target/bits', isset($c['challenge'], $c['sig'], $c['target'], $c['bits']));
-ck('issue() has issued_at/expires_at/ttl, window correct',
-   isset($c['issued_at'], $c['expires_at'], $c['ttl']) && ($c['expires_at'] - $c['issued_at']) === Dumbouncer_PoW::WINDOW);
-ck('target = 2^(32-bits)-1', $c['target'] === (2 ** (32 - $c['bits'])) - 1);
+ck('issue() has challenge/sig/target and no machine-label cruft',
+   isset($c['challenge'], $c['sig'], $c['target']) && !isset($c['scheme']) && !isset($c['formula']));
+ck('target = 2^(32-bits)-1', $c['target'] === (2 ** (32 - Dumbouncer_PoW::bits())) - 1);
+$pt = Dumbouncer_PoW::puzzle_text();
+ck('puzzle_text() is prose with NO machine labels',
+   stripos($pt, 'scheme') === false && stripos($pt, 'challenge') === false && stripos($pt, 'less than') !== false);
+ck('puzzle_text() embeds a shape-parseable token/seal/limit',
+   preg_match('/[0-9a-f]{16}:[0-9]{10}/i', $pt) && preg_match('/[0-9a-f]{64}/i', $pt) && preg_match('/less than\s+[0-9]+/i', $pt));
 
 $nonce = solve($c['challenge'], $c['target']);
 ck('solved a nonce', $nonce !== null);
@@ -37,8 +41,8 @@ ck('passes() replay = false (single-use)', Dumbouncer_PoW::passes($c['challenge'
 foreach (array(8, 12, 16) as $bits) {
     $GLOBALS['__opt']['dumbouncer_bits'] = (string) $bits;
     $cc = Dumbouncer_PoW::issue();
-    ck("bits=$bits -> issue() reports bits and target = 2^(32-bits)-1",
-       $cc['bits'] === $bits && $cc['target'] === (2 ** (32 - $bits)) - 1);
+    ck("bits=$bits -> bits() reports it and target = 2^(32-bits)-1",
+       Dumbouncer_PoW::bits() === $bits && $cc['target'] === (2 ** (32 - $bits)) - 1);
     $nn = solve($cc['challenge'], $cc['target']);
     ck("bits=$bits -> a proof solved to that target verifies",
        Dumbouncer_PoW::verify($cc['challenge'], $cc['sig'], $nn) === true);

@@ -42,12 +42,23 @@ $probe = $WPFPAGE ? "$BASE/?page_id=$WPFPAGE" : "$BASE/?p=$CPID";
 list(, $pg) = http($probe);
 if (!preg_match('#"challenge_url":"([^"]+)"#', $pg, $m)) { echo "FAIL  could not find challenge_url on $probe\n"; echo "\nagent: 0 passed, 1 failed\n"; exit(1); }
 $CHURL = str_replace('\\/', '/', $m[1]);
+// Shape-parse the prose challenge: token = 16hex:10digits, seal = 64hex, limit
+// is the number after "less than" - exactly what dumbouncer.js does. Robust to
+// the JSON-string envelope the REST/CF7 responses arrive in.
+function challenge_values($body) {
+    if (!preg_match('/[0-9a-f]{16}:[0-9]{10}/i', $body, $t)) return null;
+    if (!preg_match('/[0-9a-f]{64}/i', $body, $s)) return null;
+    if (!preg_match('/less than\s+([0-9]+)/i', $body, $l)) return null;
+    return array('token' => $t[0], 'seal' => $s[0], 'limit' => (int) $l[1]);
+}
+function is_challenge($body) { return challenge_values($body) !== null; }
 function solved($extra = array()) {
     global $CHURL;
-    list(, $j) = http($CHURL); $c = json_decode($j, true);
-    $t = (int) $c['target']; $ch = $c['challenge'];
-    for ($n = 0; ; $n++) { if (hexdec(substr(hash('sha256', $ch . ':' . $n), 0, 8)) <= $t) break; }
-    return array_merge($extra, array('dumbouncer_challenge' => $ch, 'dumbouncer_sig' => $c['sig'], 'dumbouncer_nonce' => (string) $n));
+    list(, $body) = http($CHURL);
+    $c = challenge_values($body);
+    if (!$c) return $extra;
+    for ($n = 0; ; $n++) { if (hexdec(substr(hash('sha256', $c['token'] . ':' . $n), 0, 8)) < $c['limit']) break; }
+    return array_merge($extra, array('a' => $c['token'], 'b' => $c['seal'], 'c' => (string) $n));
 }
 
 echo "== CF7 (server gate) ==\n";
@@ -56,14 +67,14 @@ if ($CF7) {
     list(, $cpage) = http("$BASE/?page_id=" . (getenv('CF7_PAGE') ?: ''));
     $hid = array(); if (preg_match_all('#name="(_wpcf7[^"]*)"\s+value="([^"]*)"#', $cpage, $mm, PREG_SET_ORDER)) foreach ($mm as $x) $hid[$x[1]] = $x[2];
     $base = array_merge($hid, array('your-name' => 'A', 'your-email' => 'a@b.com', 'your-subject' => 'hi', 'your-message' => 'msg'));
-    list(, $r) = mp_post($FB, $base); $pz = json_decode($r, true)['dumbouncer'] ?? null;
-    ck('CF7 blind submit -> self-announcing puzzle', !empty($pz['need_proof']));
+    list(, $r) = mp_post($FB, $base);
+    ck('CF7 blind submit -> self-announcing prose challenge', is_challenge($r));
     list(, $r) = mp_post($FB, solved($base)); ck('CF7 valid proof -> mail_sent', (json_decode($r, true)['status'] ?? '') === 'mail_sent');
     $s = solved($base); list(, $r1) = mp_post($FB, $s); list(, $r2) = mp_post($FB, $s);
-    ck('CF7 replay same proof -> re-challenged', !empty(json_decode($r2, true)['dumbouncer']['need_proof']));
+    ck('CF7 replay same proof -> re-challenged', is_challenge($r2));
     $good = solved($base);
-    list(, $r) = mp_post($FB, array_merge($good, array('dumbouncer_sig' => str_repeat('0', 64)))); ck('CF7 forged sig -> rejected', !empty(json_decode($r, true)['dumbouncer']['need_proof']));
-    list(, $r) = mp_post($FB, array_merge($base, array('dumbouncer_challenge' => $good['dumbouncer_challenge'], 'dumbouncer_sig' => $good['dumbouncer_sig'], 'dumbouncer_nonce' => '1'))); ck('CF7 wrong nonce -> rejected', !empty(json_decode($r, true)['dumbouncer']['need_proof']));
+    list(, $r) = mp_post($FB, array_merge($good, array('b' => str_repeat('0', 64)))); ck('CF7 forged sig -> rejected', is_challenge($r));
+    list(, $r) = mp_post($FB, array_merge($base, array('a' => $good['a'], 'b' => $good['b'], 'c' => '1'))); ck('CF7 wrong nonce -> rejected', is_challenge($r));
 } else { sk('CF7 (no form id configured)'); }
 
 echo "== Comments (server gate) ==\n";
